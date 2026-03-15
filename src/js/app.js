@@ -1651,12 +1651,15 @@ function getSwapDropdownDisplayText(tokenName, tokenSymbol, contractAddress) {
 
 function getSwapTokenListFromWallet() {
     var list = [];
-    list.push({ value: "Q", displayText: QuantumCoin + " (Q)" });
+    if (SWAP_SHOW_NATIVE_COIN) {
+        list.push({ value: "Q", displayText: QuantumCoin + " (Q)" });
+    }
     if (currentWalletTokenList != null && currentWalletTokenList.length > 0) {
         for (var i = 0; i < currentWalletTokenList.length; i++) {
             var t = currentWalletTokenList[i];
             if (!t.symbol || !t.name || !t.contractAddress) continue;
             if (htmlEncode(t.name) !== t.name || htmlEncode(t.symbol) !== t.symbol) continue;
+            if (!SWAP_SHOW_NATIVE_COIN && typeof HEISEN_CONTRACT_ADDRESS !== "undefined" && (t.contractAddress || "").toLowerCase() === (HEISEN_CONTRACT_ADDRESS || "").toLowerCase()) continue;
             list.push({
                 value: t.contractAddress,
                 displayText: getSwapDropdownDisplayText(t.name, t.symbol, t.contractAddress)
@@ -1930,6 +1933,7 @@ function openSwapScreen() {
 
 var SWAP_GAS_FEE_RATE = 1000 / 21000;
 var SWAP_GAS_HIGH_THRESHOLD = 300000;
+var SWAP_SHOW_NATIVE_COIN = false;
 
 function setSwapConfirmPanelLoading(show) {
     var loadingEl = document.getElementById("divSwapConfirmLoading");
