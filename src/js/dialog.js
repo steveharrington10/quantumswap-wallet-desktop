@@ -13,6 +13,35 @@ var spanCancel = document.getElementsByClassName("cancel")[0];
 
 var onConfirmFunc = null;
 
+// Yes/No confirmation
+var modalYesNoDialog = document.getElementById("modalYesNoDialog");
+var pDetailsYesNo = document.getElementById("pDetailsYesNo");
+var btnYesNoYes = document.getElementById("btnYesNoYes");
+var btnYesNoNo = document.getElementById("btnYesNoNo");
+var onYesNoConfirmFunc = null;
+
+function showYesNoConfirm(txt, onConfirm) {
+    pDetailsYesNo.innerText = htmlEncode(txt);
+    onYesNoConfirmFunc = onConfirm;
+    modalYesNoDialog.style.display = "block";
+    modalYesNoDialog.showModal();
+}
+
+btnYesNoYes.onclick = function () {
+    modalYesNoDialog.style.display = "none";
+    modalYesNoDialog.close();
+    if (onYesNoConfirmFunc != null) {
+        onYesNoConfirmFunc();
+        onYesNoConfirmFunc = null;
+    }
+};
+
+btnYesNoNo.onclick = function () {
+    modalYesNoDialog.style.display = "none";
+    modalYesNoDialog.close();
+    onYesNoConfirmFunc = null;
+};
+
 //Network
 var modalNetwork = document.getElementById("modalNetworkDialog");
 var spanNetwork = document.getElementsByClassName("oknetwork")[0];
@@ -176,8 +205,11 @@ btnCancelOfflineTxnSigning.onclick = function () {
 }
 
 
+var modalSwapApprovalConfirm = document.getElementById("modalSwapApprovalConfirm");
+var modalSwapApprovalSubmit = document.getElementById("modalSwapApprovalSubmit");
+
 window.onclick = function (event) {
-    if (event.target == modalOkDialog || event.target == modalConfirm || event.target == modalNetwork || event.target == modaOfflineTxnSigning || event.target == modalOfflineSignature) {
+    if (event.target == modalOkDialog || event.target == modalConfirm || event.target == modalYesNoDialog || event.target == modalNetwork || event.target == modaOfflineTxnSigning || event.target == modalOfflineSignature || event.target == modalSwapApprovalConfirm || event.target == modalSwapApprovalSubmit) {
         if (modalOkDialog.style.display !== "none") {
             modalNetwork.style.display = "none";
             modalNetwork.close();
@@ -188,6 +220,12 @@ window.onclick = function (event) {
             modalConfirm.close();
         }
 
+        if (modalYesNoDialog.style.display !== "none") {
+            modalYesNoDialog.style.display = "none";
+            modalYesNoDialog.close();
+            onYesNoConfirmFunc = null;
+        }
+
         if (modalNetwork.style.display !== "none") {
             modalNetwork.style.display = "none";
             modalNetwork.close();
@@ -196,6 +234,15 @@ window.onclick = function (event) {
         if (modaOfflineTxnSigning.style.display !== "none") {
             modaOfflineTxnSigning.style.display = "none";
             modaOfflineTxnSigning.close();
+        }
+
+        if (modalSwapApprovalConfirm && modalSwapApprovalConfirm.style.display !== "none") {
+            modalSwapApprovalConfirm.style.display = "none";
+            modalSwapApprovalConfirm.close();
+        }
+        if (modalSwapApprovalSubmit && modalSwapApprovalSubmit.style.display !== "none") {
+            modalSwapApprovalSubmit.style.display = "none";
+            modalSwapApprovalSubmit.close();
         }
     }
 }

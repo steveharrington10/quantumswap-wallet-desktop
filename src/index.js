@@ -261,7 +261,7 @@ ipcMain.handle('FormatApiIsValidEther', async (event, data) => {
 
 ipcMain.handle('FormatApiCompareEther', async (event, data) => {
     try {
-        const number1 = ethers.FixedNumber.fromString(data.num1.replaceAll(",",""));
+        const number1 = ethers.FixedNumber.fromString(data.num1.replaceAll(",", ""));
         const number2 = ethers.FixedNumber.fromString(data.num2.replaceAll(",", ""));
         if (number1.isNegative() || number2.isNegative()) {
             throw new Error("error parsing numbers. negative values.");
@@ -279,3 +279,326 @@ ipcMain.handle('FormatApiCompareEther', async (event, data) => {
         throw new Error("error parsing numbers");
     }
 })
+
+// Swap quote: QuantumCoin + QuantumSwap SDKs (Test Release Dec 2025 addresses)
+const SWAP_WQ_CONTRACT_ADDRESS = "0x80d5866b054028aef6b8519b451bec113c07077c67aa01496e91d3d21161af50";
+const SWAP_FACTORY_CONTRACT_ADDRESS = "0x6202be3cb1646a4f9ffda104aad4cb901a7ab414a89ade12ce2151b46ad241cf";
+const SWAP_ROUTER_V2_CONTRACT_ADDRESS = "0xd62870a65193504674ac9bbbc001b7d333f91e477193b7f88bfbccd8e3eea182";
+
+function buildSwapRpcUrl(rpcEndpoint) {
+    if (!rpcEndpoint || typeof rpcEndpoint !== "string") return null;
+    const s = rpcEndpoint.trim();
+    if (s.startsWith("http://") || s.startsWith("https://")) return s;
+    const isIpAddress = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(s);
+    const isLocalhost = /^localhost(:\d+)?$/i.test(s);
+    return (isIpAddress || isLocalhost ? "http://" : "https://") + s;
+}
+
+ipcMain.handle('SwapQuoteGetAmountsOut', async (event, data) => {
+    try {
+        const { Initialize, Config } = require("quantumcoin/config");
+        const { JsonRpcProvider, parseUnits, formatUnits, getAddress } = require("quantumcoin");
+        const { QuantumSwapV2Router02 } = require("quantumswap");
+
+        const rpcUrl = buildSwapRpcUrl(data.rpcEndpoint);
+        if (!rpcUrl) return { success: false, error: "Invalid RPC endpoint" };
+        const chainId = Number(data.chainId);
+        if (!Number.isInteger(chainId)) return { success: false, error: "Invalid chain ID" };
+
+        await Initialize(new Config(chainId, rpcUrl));
+        const provider = new JsonRpcProvider(rpcUrl, chainId);
+        const router = QuantumSwapV2Router02.connect(SWAP_ROUTER_V2_CONTRACT_ADDRESS, provider);
+
+        const fromAddr = data.fromTokenValue === "Q" ? SWAP_WQ_CONTRACT_ADDRESS : data.fromTokenValue;
+        const toAddr = data.toTokenValue === "Q" ? SWAP_WQ_CONTRACT_ADDRESS : data.toTokenValue;
+        const path = [getAddress(fromAddr), getAddress(toAddr)];
+
+        const fromDecimals = typeof data.fromDecimals === "number" ? data.fromDecimals : 18;
+        const toDecimals = typeof data.toDecimals === "number" ? data.toDecimals : 18;
+        const amountInWei = parseUnits(String(data.amountIn), fromDecimals);
+
+        const amounts = await router.getAmountsOut(amountInWei, path);
+        const amountOutWei = Array.isArray(amounts) ? amounts[amounts.length - 1] : amounts;
+        const amountOut = formatUnits(amountOutWei, toDecimals);
+
+        return { success: true, amountOut };
+    } catch (err) {
+        return { success: false, error: (err && err.message) ? err.message : String(err) };
+    }
+});
+
+ipcMain.handle('SwapQuoteCheckPairExists', async (event, data) => {
+    try {
+        const { Initialize, Config } = require("quantumcoin/config");
+        const { JsonRpcProvider, getAddress, ZeroAddress } = require("quantumcoin");
+        const { QuantumSwapV2Factory } = require("quantumswap");
+
+        const rpcUrl = buildSwapRpcUrl(data.rpcEndpoint);
+        if (!rpcUrl) return { exists: false, error: "Invalid RPC endpoint" };
+        const chainId = Number(data.chainId);
+        if (!Number.isInteger(chainId)) return { exists: false, error: "Invalid chain ID" };
+
+        await Initialize(new Config(chainId, rpcUrl));
+        const provider = new JsonRpcProvider(rpcUrl, chainId);
+        const factory = QuantumSwapV2Factory.connect(SWAP_FACTORY_CONTRACT_ADDRESS, provider);
+
+        const tokenA = data.fromTokenValue === "Q" ? SWAP_WQ_CONTRACT_ADDRESS : data.fromTokenValue;
+        const tokenB = data.toTokenValue === "Q" ? SWAP_WQ_CONTRACT_ADDRESS : data.toTokenValue;
+        const pairAddr = await factory.getPair(getAddress(tokenA), getAddress(tokenB));
+        const pairAddrStr = typeof pairAddr === "string" ? pairAddr : (pairAddr && pairAddr.toString ? pairAddr.toString() : String(pairAddr));
+        const zeroAddr = ZeroAddress || "0x0000000000000000000000000000000000000000000000000000000000000000";
+        const exists = !!(pairAddrStr && pairAddrStr !== zeroAddr && pairAddrStr !== "0x" + "0".repeat(64));
+
+        return { exists, error: null };
+    } catch (err) {
+        return { exists: false, error: (err && err.message) ? err.message : String(err) };
+    }
+});
+
+ipcMain.handle('SwapQuoteGetAmountsIn', async (event, data) => {
+    try {
+        const { Initialize, Config } = require("quantumcoin/config");
+        const { JsonRpcProvider, parseUnits, formatUnits, getAddress } = require("quantumcoin");
+        const { QuantumSwapV2Router02 } = require("quantumswap");
+
+        const rpcUrl = buildSwapRpcUrl(data.rpcEndpoint);
+        if (!rpcUrl) return { success: false, error: "Invalid RPC endpoint" };
+        const chainId = Number(data.chainId);
+        if (!Number.isInteger(chainId)) return { success: false, error: "Invalid chain ID" };
+
+        await Initialize(new Config(chainId, rpcUrl));
+        const provider = new JsonRpcProvider(rpcUrl, chainId);
+        const router = QuantumSwapV2Router02.connect(SWAP_ROUTER_V2_CONTRACT_ADDRESS, provider);
+
+        const fromAddr = data.fromTokenValue === "Q" ? SWAP_WQ_CONTRACT_ADDRESS : data.fromTokenValue;
+        const toAddr = data.toTokenValue === "Q" ? SWAP_WQ_CONTRACT_ADDRESS : data.toTokenValue;
+        const path = [getAddress(fromAddr), getAddress(toAddr)];
+
+        const fromDecimals = typeof data.fromDecimals === "number" ? data.fromDecimals : 18;
+        const toDecimals = typeof data.toDecimals === "number" ? data.toDecimals : 18;
+        const amountOutWei = parseUnits(String(data.amountOut), toDecimals);
+
+        const amounts = await router.getAmountsIn(amountOutWei, path);
+        const amountInWei = Array.isArray(amounts) ? amounts[0] : amounts;
+        const amountIn = formatUnits(amountInWei, fromDecimals);
+
+        return { success: true, amountIn };
+    } catch (err) {
+        return { success: false, error: (err && err.message) ? err.message : String(err) };
+    }
+});
+
+ipcMain.handle('SwapQuoteEstimateGas', async (event, data) => {
+    try {
+        const { Initialize, Config } = require("quantumcoin/config");
+        const { JsonRpcProvider, parseUnits, getAddress } = require("quantumcoin");
+        const { QuantumSwapV2Router02 } = require("quantumswap");
+
+        const rpcUrl = buildSwapRpcUrl(data.rpcEndpoint);
+        if (!rpcUrl) return { success: false, gasLimit: null, error: "Invalid RPC endpoint" };
+        const chainId = Number(data.chainId);
+        if (!Number.isInteger(chainId)) return { success: false, gasLimit: null, error: "Invalid chain ID" };
+
+        await Initialize(new Config(chainId, rpcUrl));
+        const provider = new JsonRpcProvider(rpcUrl, chainId);
+        const router = QuantumSwapV2Router02.connect(SWAP_ROUTER_V2_CONTRACT_ADDRESS, provider);
+
+        const fromAddr = data.fromTokenValue === "Q" ? SWAP_WQ_CONTRACT_ADDRESS : data.fromTokenValue;
+        const toAddr = data.toTokenValue === "Q" ? SWAP_WQ_CONTRACT_ADDRESS : data.toTokenValue;
+        const path = [getAddress(fromAddr), getAddress(toAddr)];
+        const fromDecimals = typeof data.fromDecimals === "number" ? data.fromDecimals : 18;
+        const toDecimals = typeof data.toDecimals === "number" ? data.toDecimals : 18;
+        const toAddress = data.recipientAddress || data.toAddress;
+        if (!toAddress) return { success: false, gasLimit: null, error: "Recipient address required" };
+        const deadline = BigInt(Math.floor(Date.now() / 1000) + 1200);
+        const lastChanged = data.lastChanged === "to" ? "to" : "from";
+        const slippagePercent = Math.max(0, Math.min(100, Number(data.slippagePercent) || 1));
+
+        let amountInWei;
+        let amountOutMinWei;
+        if (lastChanged === "to") {
+            const amountOutWei = parseUnits(String(data.amountOut), toDecimals);
+            const amountsIn = await router.getAmountsIn(amountOutWei, path);
+            amountInWei = Array.isArray(amountsIn) ? amountsIn[0] : amountsIn;
+            amountOutMinWei = (amountOutWei * BigInt(100 - slippagePercent)) / 100n;
+        } else {
+            amountInWei = parseUnits(String(data.amountIn), fromDecimals);
+            const amountsOut = await router.getAmountsOut(amountInWei, path);
+            const expectedAmountOutWei = Array.isArray(amountsOut) ? amountsOut[amountsOut.length - 1] : amountsOut;
+            amountOutMinWei = (expectedAmountOutWei * BigInt(100 - slippagePercent)) / 100n;
+        }
+        const tx = await router.populateTransaction.swapExactTokensForTokens(
+            amountInWei,
+            amountOutMinWei,
+            path,
+            getAddress(toAddress),
+            deadline
+        );
+        const txWithFrom = { ...tx, from: getAddress(toAddress) };
+        const gasLimit = await provider.estimateGas(txWithFrom);
+        const gasLimitStr = typeof gasLimit === "bigint" ? gasLimit.toString() : String(gasLimit);
+        return { success: true, gasLimit: gasLimitStr, error: null };
+    } catch (err) {
+        return { success: false, gasLimit: null, error: (err && err.message) ? err.message : String(err) };
+    }
+});
+
+// Strip locale formatting (e.g. commas) so parseUnits gets a valid numeric string
+function normalizeAmountString(value) {
+    if (value == null) return "0";
+    return String(value).replace(/,/g, "").trim() || "0";
+}
+
+ipcMain.handle('SwapQuoteCheckAllowance', async (event, data) => {
+    try {
+        const { Initialize, Config } = require("quantumcoin/config");
+        const { JsonRpcProvider, parseUnits, getAddress } = require("quantumcoin");
+        const { IERC20 } = require("quantumswap");
+
+        const rpcUrl = buildSwapRpcUrl(data.rpcEndpoint);
+        if (!rpcUrl) return { success: false, sufficient: false, error: "Invalid RPC endpoint" };
+        const chainId = Number(data.chainId);
+        if (!Number.isInteger(chainId)) return { success: false, sufficient: false, error: "Invalid chain ID" };
+        if (!data.ownerAddress) return { success: false, sufficient: false, error: "Owner address required" };
+
+        await Initialize(new Config(chainId, rpcUrl));
+        const provider = new JsonRpcProvider(rpcUrl, chainId);
+        const tokenAddr = data.fromTokenValue === "Q" ? SWAP_WQ_CONTRACT_ADDRESS : data.fromTokenValue;
+        const spenderAddr = SWAP_ROUTER_V2_CONTRACT_ADDRESS;
+        const decimals = typeof data.fromDecimals === "number" ? data.fromDecimals : 18;
+        const requiredWei = parseUnits(normalizeAmountString(data.requiredAmount), decimals);
+        const token = IERC20.connect(getAddress(tokenAddr), provider);
+        let allowanceWei;
+        if (typeof token.allowance !== "function") {
+            allowanceWei = 0n;
+        } else {
+            try {
+                allowanceWei = await token.allowance(getAddress(data.ownerAddress), getAddress(spenderAddr));
+            } catch (allowanceErr) {
+                allowanceWei = 0n;
+            }
+        }
+        const allowanceStr = typeof allowanceWei === "bigint" ? allowanceWei.toString() : String(allowanceWei);
+        const sufficient = (typeof allowanceWei === "bigint" ? allowanceWei : BigInt(allowanceStr)) >= requiredWei;
+        return { success: true, sufficient, allowance: allowanceStr, error: null };
+    } catch (err) {
+        return { success: false, sufficient: false, error: (err && err.message) ? err.message : String(err) };
+    }
+});
+
+ipcMain.handle('SwapQuoteEstimateApproveGas', async (event, data) => {
+    try {
+        const { Initialize, Config } = require("quantumcoin/config");
+        const { JsonRpcProvider, parseUnits, getAddress } = require("quantumcoin");
+        const { IERC20 } = require("quantumswap");
+
+        const rpcUrl = buildSwapRpcUrl(data.rpcEndpoint);
+        if (!rpcUrl) return { success: false, gasLimit: null, error: "Invalid RPC endpoint" };
+        const chainId = Number(data.chainId);
+        if (!Number.isInteger(chainId)) return { success: false, gasLimit: null, error: "Invalid chain ID" };
+        if (!data.fromAddress) return { success: false, gasLimit: null, error: "From address required" };
+
+        await Initialize(new Config(chainId, rpcUrl));
+        const provider = new JsonRpcProvider(rpcUrl, chainId);
+        const tokenAddr = data.fromTokenValue === "Q" ? SWAP_WQ_CONTRACT_ADDRESS : data.fromTokenValue;
+        const spenderAddr = SWAP_ROUTER_V2_CONTRACT_ADDRESS;
+        const decimals = typeof data.fromDecimals === "number" ? data.fromDecimals : 18;
+        const amountWei = parseUnits(normalizeAmountString(data.amount), decimals);
+
+        const token = IERC20.connect(getAddress(tokenAddr), provider);
+        const tx = await token.populateTransaction.approve(getAddress(spenderAddr), amountWei);
+        const txWithFrom = { ...tx, from: getAddress(data.fromAddress) };
+        const gasLimit = await provider.estimateGas(txWithFrom);
+        const gasLimitStr = typeof gasLimit === "bigint" ? gasLimit.toString() : String(gasLimit);
+        return { success: true, gasLimit: gasLimitStr, error: null };
+    } catch (err) {
+        return { success: false, gasLimit: null, error: (err && err.message) ? err.message : String(err) };
+    }
+});
+
+ipcMain.handle('SwapQuoteGetRouterAddress', async () => {
+    return { success: true, routerAddress: SWAP_ROUTER_V2_CONTRACT_ADDRESS, error: null };
+});
+
+ipcMain.handle('SwapQuoteGetSwapContractData', async (event, data) => {
+    try {
+        const { Initialize, Config } = require("quantumcoin/config");
+        const { JsonRpcProvider, parseUnits, getAddress } = require("quantumcoin");
+        const { QuantumSwapV2Router02 } = require("quantumswap");
+
+        const rpcUrl = buildSwapRpcUrl(data.rpcEndpoint);
+        if (!rpcUrl) return { success: false, dataHex: null, toAddress: null, valueHex: null, error: "Invalid RPC endpoint" };
+        const chainId = Number(data.chainId);
+        if (!Number.isInteger(chainId)) return { success: false, dataHex: null, toAddress: null, valueHex: null, error: "Invalid chain ID" };
+        const toAddress = data.recipientAddress || data.toAddress;
+        if (!toAddress) return { success: false, dataHex: null, toAddress: null, valueHex: null, error: "Recipient address required" };
+
+        await Initialize(new Config(chainId, rpcUrl));
+        const provider = new JsonRpcProvider(rpcUrl, chainId);
+        const router = QuantumSwapV2Router02.connect(SWAP_ROUTER_V2_CONTRACT_ADDRESS, provider);
+
+        const fromAddr = data.fromTokenValue === "Q" ? SWAP_WQ_CONTRACT_ADDRESS : data.fromTokenValue;
+        const toAddr = data.toTokenValue === "Q" ? SWAP_WQ_CONTRACT_ADDRESS : data.toTokenValue;
+        const path = [getAddress(fromAddr), getAddress(toAddr)];
+        const fromDecimals = typeof data.fromDecimals === "number" ? data.fromDecimals : 18;
+        const toDecimals = typeof data.toDecimals === "number" ? data.toDecimals : 18;
+        const deadline = BigInt(Math.floor(Date.now() / 1000) + 1200);
+        const lastChanged = data.lastChanged === "to" ? "to" : "from";
+        const slippagePercent = Math.max(0, Math.min(100, Number(data.slippagePercent) || 1));
+
+        let amountInWei;
+        let amountOutMinWei;
+        if (lastChanged === "to") {
+            const amountOutWei = parseUnits(String(data.amountOut), toDecimals);
+            const amountsIn = await router.getAmountsIn(amountOutWei, path);
+            amountInWei = Array.isArray(amountsIn) ? amountsIn[0] : amountsIn;
+            amountOutMinWei = (amountOutWei * BigInt(100 - slippagePercent)) / 100n;
+        } else {
+            amountInWei = parseUnits(String(data.amountIn), fromDecimals);
+            const amountsOut = await router.getAmountsOut(amountInWei, path);
+            const expectedAmountOutWei = Array.isArray(amountsOut) ? amountsOut[amountsOut.length - 1] : amountsOut;
+            amountOutMinWei = (expectedAmountOutWei * BigInt(100 - slippagePercent)) / 100n;
+        }
+        const tx = await router.populateTransaction.swapExactTokensForTokens(
+            amountInWei,
+            amountOutMinWei,
+            path,
+            getAddress(toAddress),
+            deadline
+        );
+        const dataHex = tx && tx.data ? (typeof tx.data === "string" ? tx.data : String(tx.data)) : null;
+        if (!dataHex) return { success: false, dataHex: null, toAddress: null, valueHex: null, error: "No contract data" };
+        const valueHex = tx.value != null && tx.value !== 0n ? "0x" + tx.value.toString(16) : "0x0";
+        return { success: true, dataHex, toAddress: SWAP_ROUTER_V2_CONTRACT_ADDRESS, valueHex, error: null };
+    } catch (err) {
+        return { success: false, dataHex: null, toAddress: null, valueHex: null, error: (err && err.message) ? err.message : String(err) };
+    }
+});
+
+ipcMain.handle('SwapQuoteGetApproveContractData', async (event, data) => {
+    try {
+        const { Initialize, Config } = require("quantumcoin/config");
+        const { JsonRpcProvider, parseUnits, getAddress } = require("quantumcoin");
+        const { IERC20 } = require("quantumswap");
+
+        const rpcUrl = buildSwapRpcUrl(data.rpcEndpoint);
+        if (!rpcUrl) return { success: false, dataHex: null, error: "Invalid RPC endpoint" };
+        const chainId = Number(data.chainId);
+        if (!Number.isInteger(chainId)) return { success: false, dataHex: null, error: "Invalid chain ID" };
+
+        await Initialize(new Config(chainId, rpcUrl));
+        const provider = new JsonRpcProvider(rpcUrl, chainId);
+        const tokenAddr = data.fromTokenValue === "Q" ? SWAP_WQ_CONTRACT_ADDRESS : data.fromTokenValue;
+        const spenderAddr = SWAP_ROUTER_V2_CONTRACT_ADDRESS;
+        const decimals = typeof data.fromDecimals === "number" ? data.fromDecimals : 18;
+        const amountWei = parseUnits(normalizeAmountString(data.amount), decimals);
+
+        const token = IERC20.connect(getAddress(tokenAddr), provider);
+        const tx = await token.populateTransaction.approve(getAddress(spenderAddr), amountWei);
+        const dataHex = tx && tx.data ? (typeof tx.data === "string" ? tx.data : String(tx.data)) : null;
+        if (!dataHex) return { success: false, dataHex: null, tokenAddress: null, error: "No contract data" };
+        return { success: true, dataHex, tokenAddress: tokenAddr, error: null };
+    } catch (err) {
+        return { success: false, dataHex: null, tokenAddress: null, error: (err && err.message) ? err.message : String(err) };
+    }
+});

@@ -22,6 +22,7 @@ const ERROR_TEMPLATE = "[ERROR]";
 const BLOCK_EXPLORER_DOMAIN_TEMPLATE = "[BLOCK_EXPLORER_DOMAIN]";
 const BLOCK_EXPLORER_ACCOUNT_TEMPLATE = "https://[BLOCK_EXPLORER_DOMAIN]/account/[ADDRESS]"
 const BLOCK_EXPLORER_TRANSACTION_TEMPLATE = "https://[BLOCK_EXPLORER_DOMAIN]/txn/[TRANSACTION_HASH]"
+const zero_address = "0x0000000000000000000000000000000000000000000000000000000000000000"; // 32 bytes hex
 
 const BLOCKCHAIN_NETWORK_INDEX_TEMPLATE = "[BLOCKCHAIN_NETWORK_INDEX]";
 const TAB_INDEX_TEMPLATE = "[TAB_INDEX]";
@@ -30,6 +31,7 @@ const BLOCKCHAIN_NETWORK_ID_TEMPLATE = "[BLOCKCHAIN_NETWORK_ID]";
 const BLOCKCHAIN_SCAN_API_DOMAIN_TEMPLATE = "[BLOCKCHAIN_SCAN_API_URL]";
 const BLOCKCHAIN_TXN_API_DOMAIN_TEMPLATE = "[BLOCKCHAIN_TXN_API_URL]";
 const BLOCKCHAIN_EXPLORER_API_DOMAIN_TEMPLATE = "[BLOCKCHAIN_EXPLORER_API_URL]";
+const BLOCKCHAIN_RPC_ENDPOINT_TEMPLATE = "[BLOCKCHAIN_RPC_ENDPOINT_URL]";
 const TRANSACTION_HASH_TEMPLATE = "[TRANSACTION_HASH]";
 const DROPDOWN_TEXT = "&#x25BC;";
 const DEFAULT_OFFLINE_TXN_SIGNING_SETTING_KEY = "DefaultOfflineTxnSigningSettingKey";
@@ -288,6 +290,7 @@ async function showBlockchainNetworksTable() {
         networkString = networkString.replaceAll(BLOCKCHAIN_SCAN_API_DOMAIN_TEMPLATE, htmlEncode(networkItem.scanApiDomain));
         networkString = networkString.replaceAll(BLOCKCHAIN_TXN_API_DOMAIN_TEMPLATE, htmlEncode(networkItem.txnApiDomain));
         networkString = networkString.replaceAll(BLOCKCHAIN_EXPLORER_API_DOMAIN_TEMPLATE, htmlEncode(networkItem.blockExplorerDomain));
+        networkString = networkString.replaceAll(BLOCKCHAIN_RPC_ENDPOINT_TEMPLATE, htmlEncode(networkItem.rpcEndpoint));
         networkListString = networkListString + networkString;
     }
     document.getElementById("tbodyNetworkRow").innerHTML = networkListString;
@@ -712,6 +715,7 @@ async function showWalletScreen() {
     document.getElementById('wallets-content').style.display = 'none';
     document.getElementById('SendScreen').style.display = 'none';
     document.getElementById('OfflineSignScreen').style.display = 'none';
+    document.getElementById('SwapScreen').style.display = 'none';
     document.getElementById('ReceiveScreen').style.display = 'none';
     document.getElementById('TransactionsScreen').style.display = 'none';
     document.getElementById('backupWalletScreen').style.display = 'none';
@@ -723,9 +727,10 @@ async function showWalletScreen() {
     document.getElementById('divNetworkDropdown').style.display = 'block';
 
     document.getElementById('SendScreen').style.display = 'none';
+    document.getElementById('SwapScreen').style.display = 'none';
     document.getElementById('ReceiveScreen').style.display = 'none';
     document.getElementById('TransactionsScreen').style.display = 'none';
-    
+
     document.getElementById('gradient').style.height = '224px';
     document.getElementById('walletAddress').textContent = currentWalletAddress;
 
@@ -1290,13 +1295,18 @@ async function refreshTokenList() {
     }
 
     let tbody = "";
+    let filteredTokenList = [];
 
     for (var i = 0; i < tokenListDetails.tokenList.length; i++) {
         let token = tokenListDetails.tokenList[i];
+        if (htmlEncode(token.name) !== token.name || htmlEncode(token.symbol) !== token.symbol) {
+            continue;
+        }
+        filteredTokenList.push(token);
         let tokenRow = tokenListRowTemplate;
         let tokenName = token.name;
         let tokenSymbol = token.symbol;
-        let tokenShortContractAddress = getShortAddress(token.contractAddress);
+        let tokenShortContractAddress = getShortAddress(token.contractAddress); //contract address is already verified for correctness in api.js listAccountTokens function
 
         if (tokenName.length > maxTokenNameLength) {
             tokenName = tokenName.substring(0, maxTokenNameLength - 1);
@@ -1323,7 +1333,7 @@ async function refreshTokenList() {
 
     document.getElementById('tbodyAccountTokens').innerHTML = tbody;
     document.getElementById('divAccountTokens').style.display = '';
-    currentWalletTokenList = tokenListDetails.tokenList;
+    currentWalletTokenList = filteredTokenList;
 }
 
 async function initRefreshAccountBalanceBackground() {
@@ -1448,6 +1458,164 @@ function getTokenBalance(contactAddress) {
     return null;
 }
 
+function getSwapSymbolFromValue(value) {
+    if (!value || value === "Q") return "Q";
+    if (currentWalletTokenList == null) return "Q";
+    for (let i = 0; i < currentWalletTokenList.length; i++) {
+        if (currentWalletTokenList[i].contractAddress === value) {
+            return currentWalletTokenList[i].symbol || "Q";
+        }
+    }
+    return "Q";
+}
+
+async function getSwapBalanceForSymbol(value) {
+    if (!value) return "0";
+    if (value === "Q" && currentAccountDetails != null) {
+        return await weiToEtherFormatted(currentAccountDetails.balance);
+    }
+    if (currentWalletTokenList == null) return "0";
+    for (let i = 0; i < currentWalletTokenList.length; i++) {
+        if (currentWalletTokenList[i].contractAddress === value) {
+            return currentWalletTokenList[i].tokenBalance || "0";
+        }
+    }
+    return "0";
+}
+
+function getSwapContractAddress(value) {
+    return (!value || value === "Q") ? zero_address : value;
+}
+
+function updateSwapContractLabels() {
+    var fromValue = document.getElementById("ddlSwapFromToken").value;
+    var toValue = document.getElementById("ddlSwapToToken").value;
+    var showFromContract = fromValue && fromValue !== "Q";
+    var showToContract = toValue && toValue !== "Q";
+    document.getElementById("divSwapFromContractRow").style.display = showFromContract ? "flex" : "none";
+    document.getElementById("divSwapToContractRow").style.display = showToContract ? "flex" : "none";
+    var explorerBase = currentBlockchainNetwork ? BLOCK_EXPLORER_ACCOUNT_TEMPLATE.replace(BLOCK_EXPLORER_DOMAIN_TEMPLATE, currentBlockchainNetwork.blockExplorerDomain) : "";
+    if (showFromContract) {
+        var fromAddr = fromValue;
+        document.getElementById("aSwapFromContract").textContent = fromAddr;
+        document.getElementById("aSwapFromContract").setAttribute("data-contract-address", fromAddr);
+        document.getElementById("aSwapFromContract").href = explorerBase.replace(ADDRESS_TEMPLATE, fromAddr);
+    }
+    if (showToContract) {
+        var toAddr = toValue;
+        document.getElementById("aSwapToContract").textContent = toAddr;
+        document.getElementById("aSwapToContract").setAttribute("data-contract-address", toAddr);
+        document.getElementById("aSwapToContract").href = explorerBase.replace(ADDRESS_TEMPLATE, toAddr);
+    }
+}
+
+async function openSwapFromContractInExplorer() {
+    var addr = document.getElementById("aSwapFromContract").getAttribute("data-contract-address") || getSwapContractAddress(document.getElementById("ddlSwapFromToken").value);
+    var url = BLOCK_EXPLORER_ACCOUNT_TEMPLATE.replace(BLOCK_EXPLORER_DOMAIN_TEMPLATE, currentBlockchainNetwork.blockExplorerDomain).replace(ADDRESS_TEMPLATE, addr);
+    await OpenUrl(url);
+}
+
+async function openSwapToContractInExplorer() {
+    var addr = document.getElementById("aSwapToContract").getAttribute("data-contract-address") || getSwapContractAddress(document.getElementById("ddlSwapToToken").value);
+    var url = BLOCK_EXPLORER_ACCOUNT_TEMPLATE.replace(BLOCK_EXPLORER_DOMAIN_TEMPLATE, currentBlockchainNetwork.blockExplorerDomain).replace(ADDRESS_TEMPLATE, addr);
+    await OpenUrl(url);
+}
+
+async function copySwapFromContractAddress() {
+    var addr = getSwapContractAddress(document.getElementById("ddlSwapFromToken").value);
+    await WriteTextToClipboard(addr);
+}
+
+async function copySwapToContractAddress() {
+    var addr = getSwapContractAddress(document.getElementById("ddlSwapToToken").value);
+    await WriteTextToClipboard(addr);
+}
+
+function formatTokenAmount(weiStr, decimals) {
+    if (!weiStr || String(weiStr).trim() === "" || weiStr === "0") return "0";
+    var d = Math.max(0, parseInt(decimals, 10) || 18);
+    var div = Math.pow(10, d);
+    var big = BigInt(String(weiStr).trim());
+    var divBig = BigInt(div);
+    var intPart = big / divBig;
+    var fracPart = big % divBig;
+    var fracStr = fracPart.toString().padStart(d, "0").replace(/0+$/, "");
+    if (fracStr === "") return intPart.toString();
+    return intPart.toString() + "." + fracStr;
+}
+
+async function updateSwapFromAllowanceDisplay() {
+    var row = document.getElementById("divSwapFromAllowanceRow");
+    var span = document.getElementById("spanSwapFromAllowance");
+    if (!row || !span) return;
+    var fromValue = document.getElementById("ddlSwapFromToken").value;
+    if (!fromValue || !currentBlockchainNetwork) {
+        row.style.display = "none";
+        return;
+    }
+    try {
+        var allowancePayload = {
+            rpcEndpoint: currentBlockchainNetwork.rpcEndpoint,
+            chainId: parseInt(currentBlockchainNetwork.networkId, 10),
+            fromTokenValue: fromValue,
+            ownerAddress: currentWalletAddress,
+            requiredAmount: "0",
+            fromDecimals: getSwapTokenDecimals(fromValue)
+        };
+        var result = await getSwapCheckAllowance(allowancePayload);
+        if (!result || !result.success || !result.allowance) {
+            row.style.display = "none";
+            return;
+        }
+        var allowanceWei = String(result.allowance).trim();
+        if (allowanceWei === "" || allowanceWei === "0" || BigInt(allowanceWei) === BigInt(0)) {
+            row.style.display = "none";
+            return;
+        }
+        var decimals = getSwapTokenDecimals(fromValue);
+        span.textContent = formatTokenAmount(allowanceWei, decimals);
+        row.style.display = "block";
+    } catch (e) {
+        row.style.display = "none";
+    }
+}
+
+async function updateSwapBalanceLabels() {
+    var fromSymbol = document.getElementById("ddlSwapFromToken").value;
+    var toSymbol = document.getElementById("ddlSwapToToken").value;
+    var fromBal = await getSwapBalanceForSymbol(fromSymbol);
+    var toBal = await getSwapBalanceForSymbol(toSymbol);
+    document.getElementById("spanSwapFromBalance").textContent = fromBal;
+    document.getElementById("spanSwapToBalance").textContent = toBal;
+    updateSwapContractLabels();
+    await updateSwapFromAllowanceDisplay();
+}
+
+function normalizeAmountForNumberInput(value) {
+    if (value == null || value === "") return "";
+    return String(value).replace(/,/g, "").trim();
+}
+
+function setSwapFromQuantityToBalance() {
+    (async function () {
+        var fromSymbol = document.getElementById("ddlSwapFromToken").value;
+        var bal = await getSwapBalanceForSymbol(fromSymbol);
+        document.getElementById("txtSwapFromQuantity").value = normalizeAmountForNumberInput(bal);
+        updateToQuantityFromFrom();
+    })();
+    return false;
+}
+
+function setSwapToQuantityToBalance() {
+    (async function () {
+        var toSymbol = document.getElementById("ddlSwapToToken").value;
+        var bal = await getSwapBalanceForSymbol(toSymbol);
+        document.getElementById("txtSwapToQuantity").value = normalizeAmountForNumberInput(bal);
+        updateFromQuantityFromTo();
+    })();
+    return false;
+}
+
 async function showTransactionsScreen() {
     document.getElementById('HomeScreen').style.display = 'none';
     document.getElementById('TransactionsScreen').style.display = 'block';
@@ -1461,6 +1629,1366 @@ async function showTransactionsScreen() {
     await refreshTransactionList();
 
     return false;
+}
+
+function showSwapScreen() {
+    showYesNoConfirm(langJson.langValues.swapEarlyPhaseWarn, function () {
+        openSwapScreen();
+    });
+    return false;
+}
+
+function getSwapDropdownDisplayText(tokenName, tokenSymbol, contractAddress) {
+    var namePart = (tokenName || "").substring(0, 25);
+    var symbolPart = (tokenSymbol || "").substring(0, 6);
+    if (!contractAddress || contractAddress === zero_address) {
+        return namePart + " (" + symbolPart + ")";
+    }
+    var addr = contractAddress;
+    var addrPart = addr.length >= 10 ? addr.substring(0, 5) + "..." + addr.slice(-5) : addr;
+    return namePart + " (" + symbolPart + ") " + addrPart;
+}
+
+function getSwapTokenListFromWallet() {
+    var list = [];
+    list.push({ value: "Q", displayText: QuantumCoin + " (Q)" });
+    if (currentWalletTokenList != null && currentWalletTokenList.length > 0) {
+        for (var i = 0; i < currentWalletTokenList.length; i++) {
+            var t = currentWalletTokenList[i];
+            if (!t.symbol || !t.name || !t.contractAddress) continue;
+            if (htmlEncode(t.name) !== t.name || htmlEncode(t.symbol) !== t.symbol) continue;
+            list.push({
+                value: t.contractAddress,
+                displayText: getSwapDropdownDisplayText(t.name, t.symbol, t.contractAddress)
+            });
+        }
+    }
+    return list;
+}
+
+function populateSwapTokenDropdowns() {
+    var swapTokenList = getSwapTokenListFromWallet();
+    var ddlFrom = document.getElementById("ddlSwapFromToken");
+    var ddlTo = document.getElementById("ddlSwapToToken");
+    removeOptions(ddlFrom);
+    removeOptions(ddlTo);
+    var selectTokenText = (langJson && langJson.langValues && langJson.langValues["select-token"]) ? langJson.langValues["select-token"] : "Select token";
+    var optFromPlaceholder = document.createElement("option");
+    optFromPlaceholder.value = "";
+    optFromPlaceholder.text = selectTokenText;
+    ddlFrom.add(optFromPlaceholder);
+    var optToPlaceholder = document.createElement("option");
+    optToPlaceholder.value = "";
+    optToPlaceholder.text = selectTokenText;
+    ddlTo.add(optToPlaceholder);
+    for (var i = 0; i < swapTokenList.length; i++) {
+        var optFrom = document.createElement("option");
+        optFrom.text = swapTokenList[i].displayText;
+        optFrom.value = swapTokenList[i].value;
+        ddlFrom.add(optFrom);
+        var optTo = document.createElement("option");
+        optTo.text = swapTokenList[i].displayText;
+        optTo.value = swapTokenList[i].value;
+        ddlTo.add(optTo);
+    }
+    ddlFrom.selectedIndex = 0;
+    ddlTo.selectedIndex = 0;
+    updateSwapTokenSymbolCache();
+}
+
+function updateSwapTokenSymbolCache() {
+    swapTokenSymbolCache = { "Q": "Q" };
+    if (currentWalletTokenList != null) {
+        for (var i = 0; i < currentWalletTokenList.length; i++) {
+            var t = currentWalletTokenList[i];
+            if (t.contractAddress && t.symbol) swapTokenSymbolCache[t.contractAddress] = t.symbol;
+        }
+    }
+}
+
+function getSwapCachedSymbol(value) {
+    if (!value || value === "Q") return "Q";
+    return swapTokenSymbolCache[value] != null ? swapTokenSymbolCache[value] : getSwapSymbolFromValue(value);
+}
+
+var swapQuantityUpdating = false;
+var swapQuoteFromDebounceId = null;
+var swapLastChanged = 'from'; // 'from' | 'to' - which quantity the user last edited
+var swapNeedsApproval = false; // true when confirm panel is in "Approve" mode
+var swapQuoteToDebounceId = null;
+var SWAP_QUOTE_DEBOUNCE_MS = 400;
+
+function getSwapTokenDecimals(value) {
+    if (!value || value === "Q") return 18;
+    if (currentWalletTokenList != null) {
+        for (var i = 0; i < currentWalletTokenList.length; i++) {
+            if (currentWalletTokenList[i].contractAddress === value && currentWalletTokenList[i].decimals != null) {
+                return currentWalletTokenList[i].decimals;
+            }
+        }
+    }
+    return 18;
+}
+
+function getSwapRate(fromValue, toValue) {
+    var fromSymbol = getSwapSymbolFromValue(fromValue);
+    var toSymbol = getSwapSymbolFromValue(toValue);
+    if (fromSymbol === toSymbol) return 1;
+    var rates = {
+        "Q": { "Y2Q": 2, "hei": 1.5, "DP": 0.8, "USDT": 0.1, "ETH": 0.00005, "WBTC": 0.000002 },
+        "Y2Q": { "Q": 0.5, "hei": 0.75, "DP": 0.4, "USDT": 0.05, "ETH": 0.000025, "WBTC": 0.000001 },
+        "hei": { "Q": 0.67, "Y2Q": 1.33, "DP": 0.53, "USDT": 0.067, "ETH": 0.000033, "WBTC": 0.0000013 },
+        "DP": { "Q": 1.25, "Y2Q": 2.5, "hei": 1.9, "USDT": 0.125, "ETH": 0.0000625, "WBTC": 0.0000025 },
+        "USDT": { "Q": 10, "Y2Q": 20, "hei": 15, "DP": 8, "ETH": 0.0005, "WBTC": 0.00002 },
+        "ETH": { "Q": 20000, "Y2Q": 40000, "hei": 30000, "DP": 16000, "USDT": 2000, "WBTC": 40 },
+        "WBTC": { "Q": 500000, "Y2Q": 1000000, "hei": 750000, "DP": 400000, "USDT": 50000, "ETH": 0.025 }
+    };
+    var fromRates = rates[fromSymbol];
+    if (fromRates && fromRates[toSymbol] != null) return fromRates[toSymbol];
+    return 1;
+}
+
+function showSwapQuoteLoading(show) {
+    var el = document.getElementById("divSwapQuoteLoading");
+    if (el) el.style.display = show ? "block" : "none";
+}
+
+async function updateToQuantityFromFrom() {
+    if (swapQuantityUpdating) return;
+    swapLastChanged = 'from';
+    var fromValue = document.getElementById("ddlSwapFromToken").value;
+    var toValue = document.getElementById("ddlSwapToToken").value;
+    var fromQtyStr = (document.getElementById("txtSwapFromQuantity").value || "").trim();
+    var fromQty = parseFloat(fromQtyStr);
+
+    if (!fromQtyStr || isNaN(fromQty) || fromQty < 0) {
+        document.getElementById("txtSwapToQuantity").value = "";
+        return;
+    }
+    if (!fromValue || !toValue || fromValue === toValue) {
+        document.getElementById("txtSwapToQuantity").value = "";
+        return;
+    }
+    if (!currentBlockchainNetwork) return;
+
+    swapQuantityUpdating = true;
+    showSwapQuoteLoading(true);
+    try {
+        var payload = {
+            rpcEndpoint: currentBlockchainNetwork.rpcEndpoint,
+            chainId: parseInt(currentBlockchainNetwork.networkId, 10) || 123123,
+            amountIn: fromQtyStr,
+            fromTokenValue: fromValue,
+            toTokenValue: toValue,
+            fromDecimals: getSwapTokenDecimals(fromValue),
+            toDecimals: getSwapTokenDecimals(toValue)
+        };
+        var result = await getSwapQuoteAmountsOut(payload);
+        if (result && result.success && result.amountOut != null) {
+            var outStr = String(result.amountOut).replace(/\.?0+$/, "") || result.amountOut;
+            document.getElementById("txtSwapToQuantity").value = outStr;
+        } else {
+            document.getElementById("txtSwapToQuantity").value = "";
+            if (result && !result.success && result.error) {
+                showWarnAlert(result.error);
+            }
+        }
+    } catch (e) {
+        document.getElementById("txtSwapToQuantity").value = "";
+        showWarnAlert((e && e.message) ? e.message : String(e));
+    } finally {
+        showSwapQuoteLoading(false);
+        swapQuantityUpdating = false;
+    }
+}
+
+function debouncedUpdateToQuantityFromFrom() {
+    if (swapQuoteFromDebounceId != null) clearTimeout(swapQuoteFromDebounceId);
+    swapQuoteFromDebounceId = setTimeout(function () {
+        swapQuoteFromDebounceId = null;
+        updateToQuantityFromFrom();
+    }, SWAP_QUOTE_DEBOUNCE_MS);
+}
+
+async function updateFromQuantityFromTo() {
+    if (swapQuantityUpdating) return;
+    swapLastChanged = 'to';
+    var fromValue = document.getElementById("ddlSwapFromToken").value;
+    var toValue = document.getElementById("ddlSwapToToken").value;
+    var toQtyStr = (document.getElementById("txtSwapToQuantity").value || "").trim();
+    var toQty = parseFloat(toQtyStr);
+
+    if (!toQtyStr || isNaN(toQty) || toQty < 0) {
+        document.getElementById("txtSwapFromQuantity").value = "";
+        return;
+    }
+    if (!fromValue || !toValue || fromValue === toValue) {
+        document.getElementById("txtSwapFromQuantity").value = "";
+        return;
+    }
+    if (!currentBlockchainNetwork) return;
+
+    swapQuantityUpdating = true;
+    showSwapQuoteLoading(true);
+    try {
+        var payload = {
+            rpcEndpoint: currentBlockchainNetwork.rpcEndpoint,
+            chainId: parseInt(currentBlockchainNetwork.networkId, 10),
+            amountOut: toQtyStr,
+            fromTokenValue: fromValue,
+            toTokenValue: toValue,
+            fromDecimals: getSwapTokenDecimals(fromValue),
+            toDecimals: getSwapTokenDecimals(toValue)
+        };
+        var result = await getSwapQuoteAmountsIn(payload);
+        if (result && result.success && result.amountIn != null) {
+            var inStr = String(result.amountIn).replace(/\.?0+$/, "") || result.amountIn;
+            document.getElementById("txtSwapFromQuantity").value = inStr;
+        } else {
+            document.getElementById("txtSwapFromQuantity").value = "";
+            if (result && !result.success && result.error) {
+                showWarnAlert(result.error);
+            }
+        }
+    } catch (e) {
+        document.getElementById("txtSwapFromQuantity").value = "";
+        showWarnAlert((e && e.message) ? e.message : String(e));
+    } finally {
+        showSwapQuoteLoading(false);
+        swapQuantityUpdating = false;
+    }
+}
+
+function debouncedUpdateFromQuantityFromTo() {
+    if (swapQuoteToDebounceId != null) clearTimeout(swapQuoteToDebounceId);
+    swapQuoteToDebounceId = setTimeout(function () {
+        swapQuoteToDebounceId = null;
+        updateFromQuantityFromTo();
+    }, SWAP_QUOTE_DEBOUNCE_MS);
+}
+
+async function updateSwapScreenInfo() {
+    // Runs when either "from" or "to" token dropdown is changed. Check pair and show same error if pair doesn't exist.
+    document.getElementById("txtSwapFromQuantity").value = "";
+    document.getElementById("txtSwapToQuantity").value = "";
+    updateSwapBalanceLabels();
+    var fromValue = document.getElementById("ddlSwapFromToken").value;
+    var toValue = document.getElementById("ddlSwapToToken").value;
+    if (!fromValue || !toValue || fromValue === toValue) {
+        return false;
+    }
+    if (!currentBlockchainNetwork) return false;
+    var pairExists = false;
+    try {
+        var payload = {
+            rpcEndpoint: currentBlockchainNetwork.rpcEndpoint,
+            chainId: parseInt(currentBlockchainNetwork.networkId, 10) || 123123,
+            fromTokenValue: fromValue,
+            toTokenValue: toValue
+        };
+        var result = await getSwapCheckPairExists(payload);
+        pairExists = result && result.exists === true;
+        if (!pairExists) {
+            if (result && result.error) {
+                showWarnAlert(result.error);
+            } else {
+                showWarnAlert((langJson && langJson.langValues && langJson.langValues["swap-no-pair"]) || "No pair has been created for these two tokens");
+            }
+            document.getElementById("txtSwapToQuantity").value = "";
+        }
+    } catch (e) {
+        showWarnAlert((e && e.message) ? e.message : String(e));
+        document.getElementById("txtSwapToQuantity").value = "";
+    }
+    if (pairExists) {
+        updateToQuantityFromFrom();
+    }
+    return false;
+}
+
+function openSwapScreen() {
+    document.getElementById('divNetworkDropdown').style.display = 'none';
+    document.getElementById('HomeScreen').style.display = 'none';
+    document.getElementById('SendScreen').style.display = 'none';
+    document.getElementById('OfflineSignScreen').style.display = 'none';
+    document.getElementById('SwapScreen').style.display = 'block';
+    document.getElementById('ReceiveScreen').style.display = 'none';
+    document.getElementById('TransactionsScreen').style.display = 'none';
+    document.getElementById('gradient').style.height = '116px';
+
+    document.getElementById("divSwapScreenInner").style.display = "block";
+    document.getElementById("divSwapConfirmPanel").style.display = "none";
+    document.getElementById("divSwapRemoveAllowancePanel").style.display = "none";
+    document.getElementById("divSwapAddAllowancePanel").style.display = "none";
+    populateSwapTokenDropdowns();
+    document.getElementById("txtSwapFromQuantity").value = "";
+    document.getElementById("txtSwapToQuantity").value = "";
+    document.getElementById("txtSwapFromQuantity").focus();
+    updateSwapBalanceLabels();
+    return false;
+}
+
+var SWAP_GAS_FEE_RATE = 1000 / 21000;
+var SWAP_GAS_HIGH_THRESHOLD = 300000;
+
+function setSwapConfirmPanelLoading(show) {
+    var loadingEl = document.getElementById("divSwapConfirmLoading");
+    var backEl = document.getElementById("divBackSwapScreen");
+    var slippageInput = document.getElementById("txtSwapSlippage");
+    var gasLimitInput = document.getElementById("txtSwapGasLimit");
+    var approvalInput = document.getElementById("txtSwapApprovalQuantity");
+    var btnNext = document.getElementById("btnSwapConfirmNext");
+    if (loadingEl) loadingEl.style.display = show ? "block" : "none";
+    var disabled = !!show;
+    if (backEl) { backEl.style.pointerEvents = disabled ? "none" : ""; backEl.setAttribute("aria-disabled", disabled ? "true" : "false"); }
+    if (slippageInput) slippageInput.disabled = disabled;
+    if (gasLimitInput) gasLimitInput.disabled = disabled;
+    if (approvalInput) approvalInput.disabled = disabled;
+    if (btnNext) { btnNext.disabled = disabled; btnNext.style.pointerEvents = disabled ? "none" : ""; }
+}
+
+async function setSwapApprovalQuantityToMax() {
+    document.getElementById("txtSwapApprovalQuantity").value = "999999999999999999";
+    onSwapApprovalQuantityInput();
+    return false;
+}
+
+async function onSwapApprovalQuantityInput() {
+    if (!swapNeedsApproval || !currentBlockchainNetwork) {
+        updateSwapGasFeeLabel();
+        return;
+    }
+    var fromValue = document.getElementById("ddlSwapFromToken").value;
+    var approvalAmount = (document.getElementById("txtSwapApprovalQuantity").value || "").trim();
+    if (!approvalAmount || parseFloat(approvalAmount) <= 0) {
+        updateSwapGasFeeLabel();
+        return;
+    }
+    try {
+        var payload = {
+            rpcEndpoint: currentBlockchainNetwork.rpcEndpoint,
+            chainId: parseInt(currentBlockchainNetwork.networkId, 10),
+            fromTokenValue: fromValue,
+            fromAddress: currentWalletAddress,
+            amount: approvalAmount,
+            fromDecimals: getSwapTokenDecimals(fromValue)
+        };
+        var res = await getSwapEstimateApproveGas(payload);
+        if (res && res.success && res.gasLimit) {
+            document.getElementById("txtSwapGasLimit").value = res.gasLimit;
+        }
+    } catch (e) { /* keep current gas limit */ }
+    updateSwapGasFeeLabel();
+}
+
+function updateSwapGasFeeLabel() {
+    var gasLimitEl = document.getElementById("txtSwapGasLimit");
+    var feeEl = document.getElementById("spanSwapGasFee");
+    var warnEl = document.getElementById("divSwapGasHighWarning");
+    if (!gasLimitEl || !feeEl || !warnEl) return;
+    var gasLimit = parseInt(gasLimitEl.value, 10);
+    if (isNaN(gasLimit) || gasLimit < 0) gasLimit = 0;
+    var fee = (gasLimit / 21000) * 1000;
+    feeEl.textContent = fee.toFixed(4);
+    warnEl.style.display = gasLimit > SWAP_GAS_HIGH_THRESHOLD ? "block" : "none";
+    if (warnEl.style.display === "block" && langJson && langJson.langValues && langJson.langValues["swap-gas-high-warning"]) {
+        warnEl.textContent = langJson.langValues["swap-gas-high-warning"];
+    } else if (warnEl.style.display === "block") {
+        warnEl.textContent = "Gas limit is high. Consider reviewing before proceeding.";
+    }
+}
+
+async function onSwapNextClick() {
+    var fromValue = document.getElementById("ddlSwapFromToken").value;
+    var toValue = document.getElementById("ddlSwapToToken").value;
+    var fromQty = (document.getElementById("txtSwapFromQuantity").value || "").trim();
+    var toQty = (document.getElementById("txtSwapToQuantity").value || "").trim();
+    if (!fromQty || parseFloat(fromQty) <= 0) {
+        showWarnAlert((langJson.langValues["swap-from-quantity"] || "From quantity") + " " + (langJson.errors && langJson.errors.invalidValue ? langJson.errors.invalidValue : "is required"));
+        return false;
+    }
+    if (!toQty || parseFloat(toQty) <= 0) {
+        showWarnAlert((langJson.langValues["swap-to-quantity"] || "To quantity") + " " + (langJson.errors && langJson.errors.invalidValue ? langJson.errors.invalidValue : "is required"));
+        return false;
+    }
+    if (!fromValue || !toValue || fromValue === toValue) {
+        showWarnAlert((langJson && langJson.langValues && langJson.langValues["swap-no-pair"]));
+        return false;
+    }
+    if (!currentBlockchainNetwork) return false;
+    var pairExists = false;
+    try {
+        var payload = {
+            rpcEndpoint: currentBlockchainNetwork.rpcEndpoint,
+            chainId: parseInt(currentBlockchainNetwork.networkId, 10),
+            fromTokenValue: fromValue,
+            toTokenValue: toValue
+        };
+        var result = await getSwapCheckPairExists(payload);
+        pairExists = result && result.exists === true;
+        if (!pairExists) {
+            if (result && result.error) {
+                showWarnAlert(result.error);
+            } else {
+                showWarnAlert((langJson && langJson.langValues && langJson.langValues["swap-no-pair"]));
+            }
+            return false;
+        }
+    } catch (e) {
+        showWarnAlert((e && e.message) ? e.message : String(e));
+        return false;
+    }
+    document.getElementById("divSwapScreenInner").style.display = "none";
+    setSwapConfirmPanelLoading(true);
+    try {
+        var allowancePayload = {
+            rpcEndpoint: currentBlockchainNetwork.rpcEndpoint,
+            chainId: parseInt(currentBlockchainNetwork.networkId, 10),
+            fromTokenValue: fromValue,
+            ownerAddress: currentWalletAddress,
+            requiredAmount: fromQty,
+            fromDecimals: getSwapTokenDecimals(fromValue)
+        };
+        var allowanceResult = await getSwapCheckAllowance(allowancePayload);
+        if (!allowanceResult || !allowanceResult.success) {
+            showWarnAlert((allowanceResult && allowanceResult.error) ? allowanceResult.error : "Failed to check approval");
+            setSwapConfirmPanelLoading(false);
+            document.getElementById("divSwapScreenInner").style.display = "block";
+            return false;
+        }
+        if (allowanceResult.sufficient) {
+            swapSuccessFromToken = fromValue;
+            swapSuccessToToken = toValue;
+            swapSuccessFromBefore = await getSwapBalanceForSymbol(fromValue);
+            swapSuccessToBefore = await getSwapBalanceForSymbol(toValue);
+            document.getElementById("divSwapConfirmPanel").style.display = "block";
+            document.getElementById("divSwapRemoveAllowancePanel").style.display = "none";
+            document.getElementById("divSwapAddAllowancePanel").style.display = "none";
+            document.getElementById("txtSwapSlippage").value = "1";
+            var gasLimitEl = document.getElementById("txtSwapGasLimit");
+            gasLimitEl.value = "210000";
+            var slippageRow = document.getElementById("divSwapSlippageRow");
+            var approvalRow = document.getElementById("divSwapApprovalQuantityRow");
+            var btnConfirmNext = document.getElementById("btnSwapConfirmNext");
+            swapNeedsApproval = false;
+            slippageRow.style.display = "block";
+            approvalRow.style.display = "none";
+            btnConfirmNext.textContent = (langJson && langJson.langValues && langJson.langValues["swap"]) ? langJson.langValues["swap"] : "Swap";
+            var slippagePercent = parseFloat(document.getElementById("txtSwapSlippage").value) || 1;
+            var estimatePayload = {
+                rpcEndpoint: currentBlockchainNetwork.rpcEndpoint,
+                chainId: parseInt(currentBlockchainNetwork.networkId, 10),
+                fromTokenValue: fromValue,
+                toTokenValue: toValue,
+                amountIn: fromQty,
+                amountOut: toQty,
+                lastChanged: swapLastChanged || "from",
+                slippagePercent: slippagePercent,
+                fromDecimals: getSwapTokenDecimals(fromValue),
+                toDecimals: getSwapTokenDecimals(toValue),
+                recipientAddress: currentWalletAddress
+            };
+            var est = await getSwapEstimateGas(estimatePayload);
+            if (est && est.success && est.gasLimit) {
+                gasLimitEl.value = est.gasLimit;
+            } else {
+                gasLimitEl.value = "210000";
+                if (est && !est.success && est.error) {
+                    showWarnAlert(est.error);
+                }
+            }
+            updateSwapGasFeeLabel();
+        } else {
+            showAddAllowancePanel(fromValue, fromQty, toValue, toQty);
+        }
+    } catch (e) {
+        showWarnAlert((e && e.message) ? e.message : String(e));
+        document.getElementById("divSwapScreenInner").style.display = "block";
+    }
+    setSwapConfirmPanelLoading(false);
+    return false;
+}
+
+function showAddAllowancePanel(fromValue, fromQty, toValue, toQty) {
+    document.getElementById("divSwapConfirmPanel").style.display = "none";
+    document.getElementById("divSwapRemoveAllowancePanel").style.display = "none";
+    document.getElementById("divSwapAddAllowancePanel").style.display = "block";
+    var contractAddr = getSwapContractAddress(fromValue);
+    var aEl = document.getElementById("aAddAllowanceContract");
+    if (aEl) { aEl.textContent = contractAddr; aEl.setAttribute("data-contract-address", contractAddr); }
+    var fromQtyNum = parseFloat(normalizeAmountForNumberInput(fromQty)) || 0;
+    var defaultApprovalQty = Math.ceil(fromQtyNum) || 1;
+    document.getElementById("txtAddAllowanceQuantity").value = defaultApprovalQty.toString();
+    document.getElementById("txtAddAllowanceGasLimit").value = "210000";
+    document.getElementById("divAddAllowanceError").style.display = "none";
+    document.getElementById("divAddAllowanceError").textContent = "";
+    setAddAllowancePanelWaiting(false);
+    (async function () {
+        try {
+            var approveGasPayload = {
+                rpcEndpoint: currentBlockchainNetwork.rpcEndpoint,
+                chainId: parseInt(currentBlockchainNetwork.networkId, 10),
+                fromTokenValue: fromValue,
+                fromAddress: currentWalletAddress,
+                amount: document.getElementById("txtAddAllowanceQuantity").value,
+                fromDecimals: getSwapTokenDecimals(fromValue)
+            };
+            var res = await getSwapEstimateApproveGas(approveGasPayload);
+            if (res && res.success && res.gasLimit) document.getElementById("txtAddAllowanceGasLimit").value = res.gasLimit;
+        } catch (e) { /* keep default */ }
+        updateAddAllowanceGasFeeLabel();
+    })();
+}
+
+function showSwapMainPanel() {
+    document.getElementById("divSwapConfirmPanel").style.display = "none";
+    document.getElementById("divSwapRemoveAllowancePanel").style.display = "none";
+    document.getElementById("divSwapAddAllowancePanel").style.display = "none";
+    document.getElementById("divSwapScreenInner").style.display = "block";
+    updateSwapFromAllowanceDisplay();
+    return false;
+}
+
+function onSwapScreenBackClick() {
+    if (document.getElementById("divSwapRemoveAllowancePanel").style.display !== "none" || document.getElementById("divSwapAddAllowancePanel").style.display !== "none" || document.getElementById("divSwapSuccessPanel").style.display !== "none") {
+        goToFirstSwapScreen();
+        return false;
+    }
+    if (document.getElementById("divSwapConfirmPanel").style.display !== "none") {
+        showSwapMainPanel();
+        return false;
+    }
+    showWalletScreen();
+    return false;
+}
+
+var swapApprovalPollingId = null;
+var swapApprovalStatusRotateId = null;
+var swapApprovalStatusStartTime = 0;
+var SWAP_APPROVAL_STATUS_MESSAGES = ["swap-approval-status-close-panel", "swap-approval-status-wait", "swap-approval-status-pending", "swap-approval-status-minute"];
+
+function hexToBytes(hexStr) {
+    var s = (hexStr || "").replace(/^0x/i, "");
+    var bytes = [];
+    for (var i = 0; i < s.length; i += 2) {
+        bytes.push(parseInt(s.substr(i, 2), 16));
+    }
+    return bytes;
+}
+
+function showSwapApprovalConfirmDialog() {
+    allowanceConfirmMode = "swap";
+    var quantity = (document.getElementById("txtSwapApprovalQuantity").value || "").trim();
+    var msg = (langJson && langJson.langValues && langJson.langValues["swap-approval-confirm-message"]) ? langJson.langValues["swap-approval-confirm-message"] : "You are approving [QUANTITY] tokens for use in QuantumSwap.";
+    msg = msg.replace("[QUANTITY]", quantity);
+    document.getElementById("pSwapApprovalConfirmMessage").textContent = msg;
+    document.getElementById("txtSwapApprovalIAgree").value = "";
+    document.getElementById("txtSwapApprovalPassword").value = "";
+    document.getElementById("modalSwapApprovalConfirm").style.display = "block";
+    document.getElementById("modalSwapApprovalConfirm").showModal();
+    setTimeout(function () {
+        var el = document.getElementById("txtSwapApprovalIAgree");
+        if (el) el.focus();
+    }, 100);
+}
+
+function closeSwapApprovalConfirmDialog() {
+    document.getElementById("modalSwapApprovalConfirm").style.display = "none";
+    document.getElementById("modalSwapApprovalConfirm").close();
+}
+
+function showSwapApprovalSubmitDialog() {
+    var hint = (langJson && langJson.langValues && langJson.langValues["swap-approval-may-close"]) ? langJson.langValues["swap-approval-may-close"] : "You may close this dialog, the transaction for approval has already been submitted.";
+    document.getElementById("pSwapApprovalSubmitCloseHint").textContent = hint;
+    updateSwapApprovalSubmitStatusText();
+    document.getElementById("divSwapApprovalSubmitError").style.display = "none";
+    document.getElementById("divSwapApprovalSubmitError").textContent = "";
+    document.getElementById("modalSwapApprovalSubmit").style.display = "block";
+    document.getElementById("modalSwapApprovalSubmit").showModal();
+    if (swapApprovalStatusRotateId) clearInterval(swapApprovalStatusRotateId);
+    swapApprovalStatusStartTime = Date.now();
+    swapApprovalStatusRotateId = setInterval(updateSwapApprovalSubmitStatusText, 3000);
+}
+
+function closeSwapApprovalSubmitDialog() {
+    document.getElementById("modalSwapApprovalSubmit").style.display = "none";
+    document.getElementById("modalSwapApprovalSubmit").close();
+}
+
+function setSwapConfirmPanelWaitingForApprovalTx(waiting) {
+    var statusDiv = document.getElementById("divSwapConfirmApprovalTxStatus");
+    var slippageInput = document.getElementById("txtSwapSlippage");
+    var approvalInput = document.getElementById("txtSwapApprovalQuantity");
+    var gasLimitInput = document.getElementById("txtSwapGasLimit");
+    var maxLink = document.querySelector("#divSwapApprovalQuantityRow a[onclick*='setSwapApprovalQuantityToMax']");
+    var btnNext = document.getElementById("btnSwapConfirmNext");
+    var errDiv = document.getElementById("divSwapConfirmApprovalTxError");
+    if (statusDiv) statusDiv.style.display = waiting ? "flex" : "none";
+    var disabled = !!waiting;
+    if (slippageInput) { slippageInput.disabled = disabled; slippageInput.style.opacity = disabled ? "0.6" : ""; }
+    if (approvalInput) { approvalInput.disabled = disabled; approvalInput.style.opacity = disabled ? "0.6" : ""; }
+    if (gasLimitInput) { gasLimitInput.disabled = disabled; gasLimitInput.style.opacity = disabled ? "0.6" : ""; }
+    if (maxLink) { maxLink.style.pointerEvents = disabled ? "none" : ""; maxLink.style.opacity = disabled ? "0.6" : ""; }
+    if (btnNext) { btnNext.disabled = disabled; btnNext.style.pointerEvents = disabled ? "none" : ""; btnNext.style.opacity = disabled ? "0.6" : ""; }
+    if (errDiv) { errDiv.style.display = "none"; errDiv.textContent = ""; }
+    if (waiting) {
+        swapApprovalStatusStartTime = Date.now();
+        updateSwapApprovalSubmitStatusText();
+        if (swapApprovalStatusRotateId) clearInterval(swapApprovalStatusRotateId);
+        swapApprovalStatusRotateId = setInterval(updateSwapApprovalSubmitStatusText, 3000);
+    } else {
+        if (swapApprovalStatusRotateId) clearInterval(swapApprovalStatusRotateId);
+        swapApprovalStatusRotateId = null;
+    }
+}
+
+async function reloadSwapApprovalContext() {
+    var fromValue = document.getElementById("ddlSwapFromToken").value;
+    var fromQty = (document.getElementById("txtSwapFromQuantity").value || "").trim();
+    if (!fromQty || !currentBlockchainNetwork) return;
+    try {
+        var allowancePayload = {
+            rpcEndpoint: currentBlockchainNetwork.rpcEndpoint,
+            chainId: parseInt(currentBlockchainNetwork.networkId, 10),
+            fromTokenValue: fromValue,
+            ownerAddress: currentWalletAddress,
+            requiredAmount: fromQty,
+            fromDecimals: getSwapTokenDecimals(fromValue)
+        };
+        var allowanceResult = await getSwapCheckAllowance(allowancePayload);
+        if (allowanceResult && allowanceResult.success && allowanceResult.sufficient) {
+            swapNeedsApproval = false;
+            document.getElementById("divSwapSlippageRow").style.display = "block";
+            document.getElementById("divSwapApprovalQuantityRow").style.display = "none";
+            var btnConfirmNext = document.getElementById("btnSwapConfirmNext");
+            btnConfirmNext.textContent = (langJson && langJson.langValues && langJson.langValues["swap"]) ? langJson.langValues["swap"] : "Swap";
+            var toQty = (document.getElementById("txtSwapToQuantity").value || "").trim();
+            var slippagePercent = parseFloat(document.getElementById("txtSwapSlippage").value) || 1;
+            var estimatePayload = {
+                rpcEndpoint: currentBlockchainNetwork.rpcEndpoint,
+                chainId: parseInt(currentBlockchainNetwork.networkId, 10),
+                fromTokenValue: fromValue,
+                toTokenValue: document.getElementById("ddlSwapToToken").value,
+                amountIn: fromQty,
+                amountOut: toQty,
+                lastChanged: swapLastChanged || "from",
+                slippagePercent: slippagePercent,
+                fromDecimals: getSwapTokenDecimals(fromValue),
+                toDecimals: getSwapTokenDecimals(document.getElementById("ddlSwapToToken").value),
+                recipientAddress: currentWalletAddress
+            };
+            var est = await getSwapEstimateGas(estimatePayload);
+            if (est && est.success && est.gasLimit) {
+                document.getElementById("txtSwapGasLimit").value = est.gasLimit;
+            }
+            updateSwapGasFeeLabel();
+        }
+    } catch (e) { /* ignore */ }
+}
+
+async function submitSwapApprovalTransaction(quantumWallet) {
+    var fromValue = document.getElementById("ddlSwapFromToken").value;
+    var approvalAmount = (document.getElementById("txtSwapApprovalQuantity").value || "").trim();
+    var gasLimitEl = document.getElementById("txtSwapGasLimit");
+    var gas = parseInt(gasLimitEl.value, 10) || 84000;
+    try {
+        var payload = {
+            rpcEndpoint: currentBlockchainNetwork.rpcEndpoint,
+            chainId: parseInt(currentBlockchainNetwork.networkId, 10),
+            fromTokenValue: fromValue,
+            amount: approvalAmount,
+            fromDecimals: getSwapTokenDecimals(fromValue)
+        };
+        var dataResult = await getSwapApproveContractData(payload);
+        if (!dataResult || !dataResult.success || !dataResult.dataHex || !dataResult.tokenAddress) {
+            setSwapConfirmPanelWaitingForApprovalTx(false);
+            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
+            if (errPanel) { errPanel.textContent = htmlEncode((dataResult && dataResult.error) ? String(dataResult.error) : (langJson.errors.failedToBuildApprovalTransaction || "Failed to build approval transaction.")); errPanel.style.display = "block"; }
+            return;
+        }
+        var sendData = hexToBytes(dataResult.dataHex);
+        var tokenAddress = dataResult.tokenAddress;
+        var coinQuantity = "0";
+        var chainId = currentBlockchainNetwork.networkId;
+        var accountDetails = await getAccountDetails(currentBlockchainNetwork.scanApiDomain, currentWalletAddress);
+        var nonce = accountDetails.nonce;
+
+        var txSigningHash = transactionGetSigningHash(quantumWallet.address, nonce, tokenAddress, coinQuantity, gas, chainId, sendData);
+        if (!txSigningHash) {
+            setSwapConfirmPanelWaitingForApprovalTx(false);
+            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
+            if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; }
+            return;
+        }
+        var quantumSig = walletSign(quantumWallet, txSigningHash);
+        var verifyResult = cryptoVerify(txSigningHash, quantumSig, base64ToBytes(quantumWallet.getPublicKey()));
+        if (!verifyResult) {
+            setSwapConfirmPanelWaitingForApprovalTx(false);
+            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
+            if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.signatureVerificationFailed || "Signature verification failed."); errPanel.style.display = "block"; }
+            return;
+        }
+        var txHashHex = transactionGetTransactionHash(quantumWallet.address, nonce, tokenAddress, coinQuantity, gas, chainId, sendData, base64ToBytes(quantumWallet.getPublicKey()), quantumSig);
+        if (!txHashHex) {
+            setSwapConfirmPanelWaitingForApprovalTx(false);
+            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
+            if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; }
+            return;
+        }
+        var txData = transactionGetData(quantumWallet.address, nonce, tokenAddress, coinQuantity, gas, chainId, sendData, base64ToBytes(quantumWallet.getPublicKey()), quantumSig);
+        if (!txData) {
+            setSwapConfirmPanelWaitingForApprovalTx(false);
+            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
+            if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; }
+            return;
+        }
+        var result = await postTransaction(currentBlockchainNetwork.txnApiDomain, txData);
+        if (result !== true) {
+            setSwapConfirmPanelWaitingForApprovalTx(false);
+            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
+            if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.transactionSubmissionFailed || langJson.errors.invalidApiResponse || "Transaction submission failed."); errPanel.style.display = "block"; }
+            return;
+        }
+        swapApprovalLastTxHash = txHashHex;
+        swapApprovalPollingId = setInterval(pollSwapApprovalTransactionStatus, 9000);
+    } catch (err) {
+        setSwapConfirmPanelWaitingForApprovalTx(false);
+        var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
+        if (errPanel) { errPanel.textContent = htmlEncode((err && err.message) ? String(err.message) : String(err)); errPanel.style.display = "block"; }
+    }
+}
+
+async function submitSwapTransaction(quantumWallet) {
+    var fromValue = document.getElementById("ddlSwapFromToken").value;
+    var toValue = document.getElementById("ddlSwapToToken").value;
+    var fromQty = (document.getElementById("txtSwapFromQuantity").value || "").trim();
+    var toQty = (document.getElementById("txtSwapToQuantity").value || "").trim();
+    var slippagePercent = parseFloat(document.getElementById("txtSwapSlippage").value) || 1;
+    var gasLimitEl = document.getElementById("txtSwapGasLimit");
+    var gas = parseInt(gasLimitEl.value, 10) || 200000;
+    try {
+        var payload = {
+            rpcEndpoint: currentBlockchainNetwork.rpcEndpoint,
+            chainId: parseInt(currentBlockchainNetwork.networkId, 10),
+            fromTokenValue: fromValue,
+            toTokenValue: toValue,
+            amountIn: fromQty,
+            amountOut: toQty,
+            lastChanged: swapLastChanged || "from",
+            slippagePercent: slippagePercent,
+            fromDecimals: getSwapTokenDecimals(fromValue),
+            toDecimals: getSwapTokenDecimals(toValue),
+            recipientAddress: currentWalletAddress
+        };
+        var dataResult = await getSwapSwapContractData(payload);
+        if (!dataResult || !dataResult.success || !dataResult.dataHex || !dataResult.toAddress) {
+            setSwapConfirmPanelWaitingForApprovalTx(false);
+            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
+            if (errPanel) { errPanel.textContent = htmlEncode((dataResult && dataResult.error) ? String(dataResult.error) : (langJson.errors.transactionSubmissionFailed || "Failed to build swap transaction.")); errPanel.style.display = "block"; }
+            return;
+        }
+        var sendData = hexToBytes(dataResult.dataHex);
+        var toAddress = dataResult.toAddress;
+        var coinQuantity = (dataResult.valueHex != null && dataResult.valueHex !== "0x0") ? String(parseInt(dataResult.valueHex, 16)) : "0";
+        var chainId = currentBlockchainNetwork.networkId;
+        var accountDetails = await getAccountDetails(currentBlockchainNetwork.scanApiDomain, currentWalletAddress);
+        var nonce = accountDetails.nonce;
+
+        var txSigningHash = transactionGetSigningHash(quantumWallet.address, nonce, toAddress, coinQuantity, gas, chainId, sendData);
+        if (!txSigningHash) {
+            setSwapConfirmPanelWaitingForApprovalTx(false);
+            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
+            if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; }
+            return;
+        }
+        var quantumSig = walletSign(quantumWallet, txSigningHash);
+        var verifyResult = cryptoVerify(txSigningHash, quantumSig, base64ToBytes(quantumWallet.getPublicKey()));
+        if (!verifyResult) {
+            setSwapConfirmPanelWaitingForApprovalTx(false);
+            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
+            if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.signatureVerificationFailed || "Signature verification failed."); errPanel.style.display = "block"; }
+            return;
+        }
+        var txHashHex = transactionGetTransactionHash(quantumWallet.address, nonce, toAddress, coinQuantity, gas, chainId, sendData, base64ToBytes(quantumWallet.getPublicKey()), quantumSig);
+        if (!txHashHex) {
+            setSwapConfirmPanelWaitingForApprovalTx(false);
+            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
+            if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; }
+            return;
+        }
+        var txData = transactionGetData(quantumWallet.address, nonce, toAddress, coinQuantity, gas, chainId, sendData, base64ToBytes(quantumWallet.getPublicKey()), quantumSig);
+        if (!txData) {
+            setSwapConfirmPanelWaitingForApprovalTx(false);
+            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
+            if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; }
+            return;
+        }
+        swapSuccessGasLimit = gas;
+        var result = await postTransaction(currentBlockchainNetwork.txnApiDomain, txData);
+        if (result !== true) {
+            setSwapConfirmPanelWaitingForApprovalTx(false);
+            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
+            if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.transactionSubmissionFailed || langJson.errors.invalidApiResponse || "Transaction submission failed."); errPanel.style.display = "block"; }
+            return;
+        }
+        swapApprovalLastTxHash = txHashHex;
+        swapConfirmTxMode = "swap";
+        swapApprovalPollingId = setInterval(pollSwapApprovalTransactionStatus, 9000);
+        if (swapApprovalStatusRotateId) clearInterval(swapApprovalStatusRotateId);
+        swapApprovalStatusStartTime = Date.now();
+        swapApprovalStatusRotateId = setInterval(updateSwapApprovalSubmitStatusText, 3000);
+    } catch (err) {
+        setSwapConfirmPanelWaitingForApprovalTx(false);
+        var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
+        if (errPanel) { errPanel.textContent = htmlEncode((err && err.message) ? String(err.message) : String(err)); errPanel.style.display = "block"; }
+    }
+}
+
+async function submitRemoveAllowanceTransaction(quantumWallet) {
+    var fromValue = document.getElementById("ddlSwapFromToken").value;
+    var gasLimitEl = document.getElementById("txtRemoveAllowanceGasLimit");
+    var gas = parseInt(gasLimitEl.value, 10) || 84000;
+    try {
+        var payload = { rpcEndpoint: currentBlockchainNetwork.rpcEndpoint, chainId: parseInt(currentBlockchainNetwork.networkId, 10), fromTokenValue: fromValue, amount: "0", fromDecimals: getSwapTokenDecimals(fromValue) };
+        var dataResult = await getSwapApproveContractData(payload);
+        if (!dataResult || !dataResult.success || !dataResult.dataHex || !dataResult.tokenAddress) {
+            setRemoveAllowancePanelWaiting(false);
+            var errPanel = document.getElementById("divRemoveAllowanceError");
+            if (errPanel) { errPanel.textContent = htmlEncode((dataResult && dataResult.error) ? String(dataResult.error) : (langJson.errors.failedToBuildApprovalTransaction || "Failed to build approval transaction.")); errPanel.style.display = "block"; }
+            return;
+        }
+        var sendData = hexToBytes(dataResult.dataHex);
+        var tokenAddress = dataResult.tokenAddress;
+        var coinQuantity = "0";
+        var chainId = currentBlockchainNetwork.networkId;
+        var accountDetails = await getAccountDetails(currentBlockchainNetwork.scanApiDomain, currentWalletAddress);
+        var nonce = accountDetails.nonce;
+        var txSigningHash = transactionGetSigningHash(quantumWallet.address, nonce, tokenAddress, coinQuantity, gas, chainId, sendData);
+        if (!txSigningHash) { setRemoveAllowancePanelWaiting(false); var errPanel = document.getElementById("divRemoveAllowanceError"); if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; } return; }
+        var quantumSig = walletSign(quantumWallet, txSigningHash);
+        var verifyResult = cryptoVerify(txSigningHash, quantumSig, base64ToBytes(quantumWallet.getPublicKey()));
+        if (!verifyResult) { setRemoveAllowancePanelWaiting(false); var errPanel = document.getElementById("divRemoveAllowanceError"); if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.signatureVerificationFailed || "Signature verification failed."); errPanel.style.display = "block"; } return; }
+        var txHashHex = transactionGetTransactionHash(quantumWallet.address, nonce, tokenAddress, coinQuantity, gas, chainId, sendData, base64ToBytes(quantumWallet.getPublicKey()), quantumSig);
+        if (!txHashHex) { setRemoveAllowancePanelWaiting(false); var errPanel = document.getElementById("divRemoveAllowanceError"); if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; } return; }
+        var txData = transactionGetData(quantumWallet.address, nonce, tokenAddress, coinQuantity, gas, chainId, sendData, base64ToBytes(quantumWallet.getPublicKey()), quantumSig);
+        if (!txData) { setRemoveAllowancePanelWaiting(false); var errPanel = document.getElementById("divRemoveAllowanceError"); if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; } return; }
+        var result = await postTransaction(currentBlockchainNetwork.txnApiDomain, txData);
+        if (result !== true) { setRemoveAllowancePanelWaiting(false); var errPanel = document.getElementById("divRemoveAllowanceError"); if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.transactionSubmissionFailed || langJson.errors.invalidApiResponse || "Transaction submission failed."); errPanel.style.display = "block"; } return; }
+        swapApprovalLastTxHash = txHashHex;
+        allowancePanelMode = "remove";
+        swapApprovalPollingId = setInterval(pollSwapApprovalTransactionStatus, 9000);
+    } catch (err) {
+        setRemoveAllowancePanelWaiting(false);
+        var errPanel = document.getElementById("divRemoveAllowanceError");
+        if (errPanel) { errPanel.textContent = htmlEncode((err && err.message) ? String(err.message) : String(err)); errPanel.style.display = "block"; }
+    }
+}
+
+async function submitAddAllowanceTransaction(quantumWallet) {
+    var fromValue = document.getElementById("ddlSwapFromToken").value;
+    var approvalAmount = (document.getElementById("txtAddAllowanceQuantity").value || "").trim();
+    var gasLimitEl = document.getElementById("txtAddAllowanceGasLimit");
+    var gas = parseInt(gasLimitEl.value, 10) || 84000;
+    if (!approvalAmount || parseFloat(approvalAmount) <= 0) {
+        setAddAllowancePanelWaiting(false);
+        var errPanel = document.getElementById("divAddAllowanceError");
+        if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.approvalQuantityRequired || "Approval quantity is required."); errPanel.style.display = "block"; }
+        return;
+    }
+    try {
+        var payload = { rpcEndpoint: currentBlockchainNetwork.rpcEndpoint, chainId: parseInt(currentBlockchainNetwork.networkId, 10), fromTokenValue: fromValue, amount: approvalAmount, fromDecimals: getSwapTokenDecimals(fromValue) };
+        var dataResult = await getSwapApproveContractData(payload);
+        if (!dataResult || !dataResult.success || !dataResult.dataHex || !dataResult.tokenAddress) {
+            setAddAllowancePanelWaiting(false);
+            var errPanel = document.getElementById("divAddAllowanceError");
+            if (errPanel) { errPanel.textContent = htmlEncode((dataResult && dataResult.error) ? String(dataResult.error) : (langJson.errors.failedToBuildApprovalTransaction || "Failed to build approval transaction.")); errPanel.style.display = "block"; }
+            return;
+        }
+        var sendData = hexToBytes(dataResult.dataHex);
+        var tokenAddress = dataResult.tokenAddress;
+        var coinQuantity = "0";
+        var chainId = currentBlockchainNetwork.networkId;
+        var accountDetails = await getAccountDetails(currentBlockchainNetwork.scanApiDomain, currentWalletAddress);
+        var nonce = accountDetails.nonce;
+        var txSigningHash = transactionGetSigningHash(quantumWallet.address, nonce, tokenAddress, coinQuantity, gas, chainId, sendData);
+        if (!txSigningHash) { setAddAllowancePanelWaiting(false); var errPanel = document.getElementById("divAddAllowanceError"); if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; } return; }
+        var quantumSig = walletSign(quantumWallet, txSigningHash);
+        var verifyResult = cryptoVerify(txSigningHash, quantumSig, base64ToBytes(quantumWallet.getPublicKey()));
+        if (!verifyResult) { setAddAllowancePanelWaiting(false); var errPanel = document.getElementById("divAddAllowanceError"); if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.signatureVerificationFailed || "Signature verification failed."); errPanel.style.display = "block"; } return; }
+        var txHashHex = transactionGetTransactionHash(quantumWallet.address, nonce, tokenAddress, coinQuantity, gas, chainId, sendData, base64ToBytes(quantumWallet.getPublicKey()), quantumSig);
+        if (!txHashHex) { setAddAllowancePanelWaiting(false); var errPanel = document.getElementById("divAddAllowanceError"); if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; } return; }
+        var txData = transactionGetData(quantumWallet.address, nonce, tokenAddress, coinQuantity, gas, chainId, sendData, base64ToBytes(quantumWallet.getPublicKey()), quantumSig);
+        if (!txData) { setAddAllowancePanelWaiting(false); var errPanel = document.getElementById("divAddAllowanceError"); if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; } return; }
+        var result = await postTransaction(currentBlockchainNetwork.txnApiDomain, txData);
+        if (result !== true) { setAddAllowancePanelWaiting(false); var errPanel = document.getElementById("divAddAllowanceError"); if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.transactionSubmissionFailed || langJson.errors.invalidApiResponse || "Transaction submission failed."); errPanel.style.display = "block"; } return; }
+        swapApprovalLastTxHash = txHashHex;
+        allowancePanelMode = "add";
+        swapApprovalPollingId = setInterval(pollSwapApprovalTransactionStatus, 9000);
+    } catch (err) {
+        setAddAllowancePanelWaiting(false);
+        var errPanel = document.getElementById("divAddAllowanceError");
+        if (errPanel) { errPanel.textContent = htmlEncode((err && err.message) ? String(err.message) : String(err)); errPanel.style.display = "block"; }
+    }
+}
+
+var swapApprovalLastTxHash = null;
+var allowanceConfirmMode = null;
+var allowancePanelMode = null;
+var swapConfirmTxMode = null;
+var swapSuccessFromToken = null;
+var swapSuccessToToken = null;
+var swapSuccessFromBefore = null;
+var swapSuccessToBefore = null;
+var swapSuccessGasLimit = null;
+var swapTokenSymbolCache = {};
+
+function goToFirstSwapScreen() {
+    document.getElementById("divSwapConfirmPanel").style.display = "none";
+    document.getElementById("divSwapRemoveAllowancePanel").style.display = "none";
+    document.getElementById("divSwapAddAllowancePanel").style.display = "none";
+    document.getElementById("divSwapSuccessPanel").style.display = "none";
+    document.getElementById("divSwapScreenInner").style.display = "block";
+    updateSwapFromAllowanceDisplay();
+}
+
+function setSwapSuccessSymbolAndLink(container, symbol, explorerUrl, shortAddr) {
+    if (!container) return;
+    container.textContent = "";
+    if (!explorerUrl || !shortAddr) {
+        container.textContent = symbol || "Q";
+        return;
+    }
+    container.appendChild(document.createTextNode(symbol + " ("));
+    var a = document.createElement("a");
+    a.href = "#";
+    a.textContent = shortAddr;
+    a.style.color = "#0066cc";
+    a.style.textDecoration = "underline";
+    a.onclick = function () { OpenUrl(explorerUrl); return false; };
+    container.appendChild(a);
+    container.appendChild(document.createTextNode(")"));
+}
+
+function showSwapSuccessPanel(fromToken, toToken, fromBefore, toBefore, fromAfter, toAfter, gasFeeCoins) {
+    document.getElementById("divSwapScreenInner").style.display = "none";
+    document.getElementById("divSwapConfirmPanel").style.display = "none";
+    document.getElementById("divSwapRemoveAllowancePanel").style.display = "none";
+    document.getElementById("divSwapAddAllowancePanel").style.display = "none";
+    document.getElementById("divSwapSuccessPanel").style.display = "block";
+
+    var explorerBase = currentBlockchainNetwork ? BLOCK_EXPLORER_ACCOUNT_TEMPLATE.replace(BLOCK_EXPLORER_DOMAIN_TEMPLATE, currentBlockchainNetwork.blockExplorerDomain) : "";
+    var fromAddr = getSwapContractAddress(fromToken);
+    var toAddr = getSwapContractAddress(toToken);
+    var fromSymbol = getSwapCachedSymbol(fromToken);
+    var toSymbol = getSwapCachedSymbol(toToken);
+    function shortAddr(addr) { return (!addr || addr === zero_address) ? "" : (String(addr).length > 10 ? String(addr).slice(0, 6) + "..." + String(addr).slice(-4) : addr); }
+    var fromUrl = (fromAddr && fromAddr !== zero_address && explorerBase) ? explorerBase.replace(ADDRESS_TEMPLATE, fromAddr) : "";
+    var toUrl = (toAddr && toAddr !== zero_address && explorerBase) ? explorerBase.replace(ADDRESS_TEMPLATE, toAddr) : "";
+
+    setSwapSuccessSymbolAndLink(document.getElementById("spanSwapSuccessFromTokenDisplay"), fromSymbol, fromUrl, shortAddr(fromAddr));
+    setSwapSuccessSymbolAndLink(document.getElementById("spanSwapSuccessToTokenDisplay"), toSymbol, toUrl, shortAddr(toAddr));
+    setSwapSuccessSymbolAndLink(document.getElementById("tdSwapSuccessFromName"), fromSymbol, fromUrl, shortAddr(fromAddr));
+    setSwapSuccessSymbolAndLink(document.getElementById("tdSwapSuccessToName"), toSymbol, toUrl, shortAddr(toAddr));
+
+    document.getElementById("tdSwapSuccessFromBefore").textContent = fromBefore != null ? String(fromBefore) : "0";
+    document.getElementById("tdSwapSuccessFromAfter").textContent = fromAfter != null ? String(fromAfter) : "0";
+    document.getElementById("tdSwapSuccessToBefore").textContent = toBefore != null ? String(toBefore) : "0";
+    document.getElementById("tdSwapSuccessToAfter").textContent = toAfter != null ? String(toAfter) : "0";
+    document.getElementById("spanSwapSuccessGasFee").textContent = gasFeeCoins != null ? String(gasFeeCoins) : "0";
+}
+
+function onSwapSuccessOkClick() {
+    goToFirstSwapScreen();
+    updateSwapBalanceLabels();
+    return false;
+}
+
+function updateSwapApprovalSubmitStatusText() {
+    var idx = Math.floor((Date.now() - swapApprovalStatusStartTime) / 3000) % SWAP_APPROVAL_STATUS_MESSAGES.length;
+    var key = SWAP_APPROVAL_STATUS_MESSAGES[idx];
+    var text = (langJson && langJson.langValues && langJson.langValues[key]) ? langJson.langValues[key] : key;
+    var panelEl = document.getElementById("spanSwapConfirmApprovalStatus");
+    if (panelEl) panelEl.textContent = text;
+    var removeStatusDiv = document.getElementById("divRemoveAllowanceTxStatus");
+    var removeSpan = document.getElementById("spanRemoveAllowanceStatus");
+    if (removeSpan && removeStatusDiv && removeStatusDiv.style.display === "flex") removeSpan.textContent = text;
+    var addStatusDiv = document.getElementById("divAddAllowanceTxStatus");
+    var addSpan = document.getElementById("spanAddAllowanceStatus");
+    if (addSpan && addStatusDiv && addStatusDiv.style.display === "flex") addSpan.textContent = text;
+    var dialogEl = document.getElementById("pSwapApprovalSubmitStatus");
+    if (dialogEl) dialogEl.textContent = text;
+}
+
+function setRemoveAllowancePanelWaiting(waiting) {
+    var statusDiv = document.getElementById("divRemoveAllowanceTxStatus");
+    var gasInput = document.getElementById("txtRemoveAllowanceGasLimit");
+    var btn = document.getElementById("btnRemoveAllowanceRemove");
+    var errDiv = document.getElementById("divRemoveAllowanceError");
+    if (statusDiv) statusDiv.style.display = waiting ? "flex" : "none";
+    var disabled = !!waiting;
+    if (gasInput) { gasInput.disabled = disabled; gasInput.style.opacity = disabled ? "0.6" : ""; }
+    if (btn) { btn.disabled = disabled; btn.style.pointerEvents = disabled ? "none" : ""; btn.style.opacity = disabled ? "0.6" : ""; }
+    if (errDiv) { errDiv.style.display = "none"; errDiv.textContent = ""; }
+    if (waiting) {
+        updateSwapApprovalSubmitStatusText();
+        if (swapApprovalStatusRotateId) clearInterval(swapApprovalStatusRotateId);
+        swapApprovalStatusRotateId = setInterval(updateSwapApprovalSubmitStatusText, 3000);
+    } else {
+        if (swapApprovalStatusRotateId) clearInterval(swapApprovalStatusRotateId);
+        swapApprovalStatusRotateId = null;
+    }
+}
+
+function setAddAllowancePanelWaiting(waiting) {
+    var statusDiv = document.getElementById("divAddAllowanceTxStatus");
+    var gasInput = document.getElementById("txtAddAllowanceGasLimit");
+    var qtyInput = document.getElementById("txtAddAllowanceQuantity");
+    var maxLink = document.querySelector("#divAddAllowanceQuantityRow a[onclick*='setAddAllowanceQuantityToMax']");
+    var btn = document.getElementById("btnAddAllowanceAdd");
+    var errDiv = document.getElementById("divAddAllowanceError");
+    if (statusDiv) statusDiv.style.display = waiting ? "flex" : "none";
+    var disabled = !!waiting;
+    if (gasInput) { gasInput.disabled = disabled; gasInput.style.opacity = disabled ? "0.6" : ""; }
+    if (qtyInput) { qtyInput.disabled = disabled; qtyInput.style.opacity = disabled ? "0.6" : ""; }
+    if (maxLink) { maxLink.style.pointerEvents = disabled ? "none" : ""; maxLink.style.opacity = disabled ? "0.6" : ""; }
+    if (btn) { btn.disabled = disabled; btn.style.pointerEvents = disabled ? "none" : ""; btn.style.opacity = disabled ? "0.6" : ""; }
+    if (errDiv) { errDiv.style.display = "none"; errDiv.textContent = ""; }
+    if (waiting) {
+        swapApprovalStatusStartTime = Date.now();
+        updateSwapApprovalSubmitStatusText();
+        if (swapApprovalStatusRotateId) clearInterval(swapApprovalStatusRotateId);
+        swapApprovalStatusRotateId = setInterval(updateSwapApprovalSubmitStatusText, 3000);
+    } else {
+        if (swapApprovalStatusRotateId) clearInterval(swapApprovalStatusRotateId);
+        swapApprovalStatusRotateId = null;
+    }
+}
+
+function updateRemoveAllowanceGasFeeLabel() {
+    var gasLimitEl = document.getElementById("txtRemoveAllowanceGasLimit");
+    var feeEl = document.getElementById("spanRemoveAllowanceGasFee");
+    var warnEl = document.getElementById("divRemoveAllowanceGasHighWarning");
+    if (!gasLimitEl || !feeEl) return;
+    var gas = parseInt(gasLimitEl.value, 10) || 210000;
+    var fee = (gas * SWAP_GAS_FEE_RATE).toFixed(6);
+    feeEl.textContent = fee;
+    if (warnEl) {
+        warnEl.style.display = gas > SWAP_GAS_HIGH_THRESHOLD ? "block" : "none";
+        if (warnEl.style.display === "block" && langJson && langJson.langValues && langJson.langValues["swap-gas-high-warning"]) {
+            warnEl.textContent = langJson.langValues["swap-gas-high-warning"];
+        } else if (warnEl.style.display === "block") {
+            warnEl.textContent = "Gas limit is high. Consider reviewing before proceeding.";
+        }
+    }
+}
+
+function updateAddAllowanceGasFeeLabel() {
+    var gasLimitEl = document.getElementById("txtAddAllowanceGasLimit");
+    var feeEl = document.getElementById("spanAddAllowanceGasFee");
+    var warnEl = document.getElementById("divAddAllowanceGasHighWarning");
+    if (!gasLimitEl || !feeEl) return;
+    var gas = parseInt(gasLimitEl.value, 10) || 210000;
+    var fee = (gas * SWAP_GAS_FEE_RATE).toFixed(6);
+    feeEl.textContent = fee;
+    if (warnEl) {
+        warnEl.style.display = gas > SWAP_GAS_HIGH_THRESHOLD ? "block" : "none";
+        if (warnEl.style.display === "block" && langJson && langJson.langValues && langJson.langValues["swap-gas-high-warning"]) {
+            warnEl.textContent = langJson.langValues["swap-gas-high-warning"];
+        } else if (warnEl.style.display === "block") {
+            warnEl.textContent = "Gas limit is high. Consider reviewing before proceeding.";
+        }
+    }
+}
+
+async function openRemoveAllowanceContractInExplorer() {
+    var addr = getSwapContractAddress(document.getElementById("ddlSwapFromToken").value);
+    var url = BLOCK_EXPLORER_ACCOUNT_TEMPLATE.replace(BLOCK_EXPLORER_DOMAIN_TEMPLATE, currentBlockchainNetwork.blockExplorerDomain).replace(ADDRESS_TEMPLATE, addr);
+    await OpenUrl(url);
+}
+
+async function openAddAllowanceContractInExplorer() {
+    var addr = getSwapContractAddress(document.getElementById("ddlSwapFromToken").value);
+    var url = BLOCK_EXPLORER_ACCOUNT_TEMPLATE.replace(BLOCK_EXPLORER_DOMAIN_TEMPLATE, currentBlockchainNetwork.blockExplorerDomain).replace(ADDRESS_TEMPLATE, addr);
+    await OpenUrl(url);
+}
+
+function showSwapExecuteConfirmDialog() {
+    var fromValue = document.getElementById("ddlSwapFromToken").value;
+    var toValue = document.getElementById("ddlSwapToToken").value;
+    var fromAmt = (document.getElementById("txtSwapFromQuantity").value || "").trim();
+    var toAmt = (document.getElementById("txtSwapToQuantity").value || "").trim();
+    function sym(v) { return v === "Q" ? "Q" : (String(v).length > 10 ? String(v).slice(0, 6) + "..." + String(v).slice(-4) : v); }
+    var msg = (langJson && langJson.langValues && langJson.langValues["swap-execute-confirm-message"]) ? langJson.langValues["swap-execute-confirm-message"] : "You are swapping [FROM_AMOUNT] [FROM_SYMBOL] for at least [TO_AMOUNT] [TO_SYMBOL].";
+    msg = msg.replace("[FROM_AMOUNT]", fromAmt).replace("[FROM_SYMBOL]", sym(fromValue)).replace("[TO_AMOUNT]", toAmt).replace("[TO_SYMBOL]", sym(toValue));
+    showAllowanceConfirmDialog(msg, "swapExecute");
+}
+
+function showAllowanceConfirmDialog(message, mode) {
+    allowanceConfirmMode = mode;
+    document.getElementById("pSwapApprovalConfirmMessage").textContent = message;
+    document.getElementById("txtSwapApprovalIAgree").value = "";
+    document.getElementById("txtSwapApprovalPassword").value = "";
+    var dialog = document.getElementById("modalSwapApprovalConfirm");
+    var content = dialog ? dialog.querySelector(".modal-content") : null;
+    var inner = content ? content.querySelector("div:first-child") : null;
+    if (content) {
+        if (mode === "swapExecute") {
+            content.style.width = "calc(80% + 50px)";
+            if (inner) inner.style.minHeight = "190px"; // 160 + 30
+        } else {
+            content.style.width = "";
+            if (inner) inner.style.minHeight = "";
+        }
+    }
+    dialog.style.display = "block";
+    dialog.showModal();
+    setTimeout(function () {
+        var el = document.getElementById("txtSwapApprovalIAgree");
+        if (el) el.focus();
+    }, 100);
+}
+
+async function pollSwapApprovalTransactionStatus() {
+    if (!swapApprovalLastTxHash || !currentBlockchainNetwork) return;
+    try {
+        var res = await getTransactionStatusByHash(currentBlockchainNetwork.scanApiDomain, currentWalletAddress, swapApprovalLastTxHash);
+        if (allowancePanelMode === "remove" || allowancePanelMode === "add") {
+            if (res.status === "succeeded") {
+                if (swapApprovalPollingId) clearInterval(swapApprovalPollingId);
+                swapApprovalPollingId = null;
+                if (swapApprovalStatusRotateId) clearInterval(swapApprovalStatusRotateId);
+                swapApprovalStatusRotateId = null;
+                swapApprovalLastTxHash = null;
+                var mode = allowancePanelMode;
+                allowancePanelMode = null;
+                setRemoveAllowancePanelWaiting(false);
+                setAddAllowancePanelWaiting(false);
+                var msg = (mode === "remove") ? ((langJson && langJson.langValues && langJson.langValues["remove-allowance-succeeded"]) ? langJson.langValues["remove-allowance-succeeded"] : "Remove allowance succeeded.") : ((langJson && langJson.langValues && langJson.langValues["add-allowance-succeeded"]) ? langJson.langValues["add-allowance-succeeded"] : "Add allowance succeeded.");
+                showAlertAndExecuteOnClose(msg, goToFirstSwapScreen);
+            } else if (res.status === "failed") {
+                if (swapApprovalPollingId) clearInterval(swapApprovalPollingId);
+                swapApprovalPollingId = null;
+                if (swapApprovalStatusRotateId) clearInterval(swapApprovalStatusRotateId);
+                swapApprovalStatusRotateId = null;
+                swapApprovalLastTxHash = null;
+                var mode = allowancePanelMode;
+                allowancePanelMode = null;
+                setRemoveAllowancePanelWaiting(false);
+                setAddAllowancePanelWaiting(false);
+                showWarnAlert(res.error || (langJson.errors.transactionFailed || "Transaction failed."));
+            }
+            return;
+        }
+        if (swapConfirmTxMode === "swap") {
+            if (res.status === "succeeded") {
+                if (swapApprovalPollingId) clearInterval(swapApprovalPollingId);
+                swapApprovalPollingId = null;
+                if (swapApprovalStatusRotateId) clearInterval(swapApprovalStatusRotateId);
+                swapApprovalStatusRotateId = null;
+                swapApprovalLastTxHash = null;
+                swapConfirmTxMode = null;
+                setSwapConfirmPanelWaitingForApprovalTx(false);
+                (async function () {
+                    await refreshAccountBalance();
+                    var fromAfter = await getSwapBalanceForSymbol(swapSuccessFromToken);
+                    var toAfter = await getSwapBalanceForSymbol(swapSuccessToToken);
+                    var gasFeeCoins = swapSuccessGasLimit != null ? (swapSuccessGasLimit * SWAP_GAS_FEE_RATE).toFixed(6) : "0";
+                    showSwapSuccessPanel(swapSuccessFromToken, swapSuccessToToken, swapSuccessFromBefore, swapSuccessToBefore, fromAfter, toAfter, gasFeeCoins);
+                    swapSuccessFromToken = null;
+                    swapSuccessToToken = null;
+                    swapSuccessFromBefore = null;
+                    swapSuccessToBefore = null;
+                    swapSuccessGasLimit = null;
+                })();
+            } else if (res.status === "failed") {
+                if (swapApprovalPollingId) clearInterval(swapApprovalPollingId);
+                swapApprovalPollingId = null;
+                if (swapApprovalStatusRotateId) clearInterval(swapApprovalStatusRotateId);
+                swapApprovalStatusRotateId = null;
+                swapApprovalLastTxHash = null;
+                swapConfirmTxMode = null;
+                setSwapConfirmPanelWaitingForApprovalTx(false);
+                var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
+                if (errPanel) { errPanel.textContent = htmlEncode(res.error || (langJson.errors.transactionFailed || "Transaction failed.")); errPanel.style.display = "block"; }
+            }
+            return;
+        }
+        if (res.status === "succeeded") {
+            if (swapApprovalPollingId) clearInterval(swapApprovalPollingId);
+            swapApprovalPollingId = null;
+            swapApprovalLastTxHash = null;
+            setSwapConfirmPanelWaitingForApprovalTx(false);
+            await reloadSwapApprovalContext();
+        } else if (res.status === "failed") {
+            if (swapApprovalPollingId) clearInterval(swapApprovalPollingId);
+            swapApprovalPollingId = null;
+            setSwapConfirmPanelWaitingForApprovalTx(false);
+            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
+            if (errPanel) { errPanel.textContent = htmlEncode(res.error || (langJson.errors.transactionFailed || "Transaction failed.")); errPanel.style.display = "block"; }
+        }
+    } catch (e) { /* ignore */ }
+}
+
+function onSwapApprovalConfirmSubmitClick() {
+    var iagree = (document.getElementById("txtSwapApprovalIAgree").value || "").trim().toLowerCase();
+    if (iagree !== "i agree") {
+        showWarnAlert((langJson && langJson.langValues && langJson.langValues["type-the-words"]) ? langJson.langValues["type-the-words"] + " i agree" : "Type the words i agree");
+        return false;
+    }
+    var password = (document.getElementById("txtSwapApprovalPassword").value || "").trim();
+    if (!password) {
+        showWarnAlert(langJson.errors.enterQuantumPassword || "Enter password");
+        return false;
+    }
+    showLoadingAndExecuteAsync(langJson.langValues.waitWalletOpen, decryptAndUnlockWalletForSwapApproval);
+    return false;
+}
+
+async function decryptAndUnlockWalletForSwapApproval() {
+    var password = (document.getElementById("txtSwapApprovalPassword").value || "").trim();
+    try {
+        var quantumWallet = await walletGetByAddress(password, currentWalletAddress);
+        if (quantumWallet == null) {
+            hideWaitingBox();
+            if (allowanceConfirmMode === "remove" || allowanceConfirmMode === "add" || allowanceConfirmMode === "swapExecute") {
+                showWarnAlertAndExecuteOnClose(getGenericError(), function () { document.getElementById("txtSwapApprovalPassword").focus(); });
+            } else {
+                showWarnAlert(getGenericError());
+            }
+            return;
+        }
+        hideWaitingBox();
+        closeSwapApprovalConfirmDialog();
+        if (allowanceConfirmMode === "remove") {
+            allowanceConfirmMode = null;
+            setRemoveAllowancePanelWaiting(true);
+            await submitRemoveAllowanceTransaction(quantumWallet);
+        } else if (allowanceConfirmMode === "add") {
+            allowanceConfirmMode = null;
+            setAddAllowancePanelWaiting(true);
+            await submitAddAllowanceTransaction(quantumWallet);
+        } else if (allowanceConfirmMode === "swapExecute") {
+            allowanceConfirmMode = null;
+            setSwapConfirmPanelWaitingForApprovalTx(true);
+            await submitSwapTransaction(quantumWallet);
+        } else {
+            allowanceConfirmMode = null;
+            setSwapConfirmPanelWaitingForApprovalTx(true);
+            await submitSwapApprovalTransaction(quantumWallet);
+        }
+    } catch (err) {
+        hideWaitingBox();
+        if (allowanceConfirmMode === "remove" || allowanceConfirmMode === "add" || allowanceConfirmMode === "swapExecute") {
+            showWarnAlertAndExecuteOnClose((err && err.message) ? err.message : String(err), function () { document.getElementById("txtSwapApprovalPassword").focus(); });
+        } else {
+            showWarnAlert((err && err.message) ? err.message : String(err));
+        }
+    }
+}
+
+function onSwapApprovalSubmitCloseClick() {
+    if (swapApprovalPollingId) clearInterval(swapApprovalPollingId);
+    swapApprovalPollingId = null;
+    if (swapApprovalStatusRotateId) clearInterval(swapApprovalStatusRotateId);
+    swapApprovalStatusRotateId = null;
+    closeSwapApprovalSubmitDialog();
+    return false;
+}
+
+function onSwapApprovalConfirmCancelClick() {
+    allowanceConfirmMode = null;
+    closeSwapApprovalConfirmDialog();
+    return false;
+}
+
+function onRemoveSwapAllowanceClick() {
+    if (!currentBlockchainNetwork) return false;
+    var fromValue = document.getElementById("ddlSwapFromToken").value;
+    if (!fromValue) return false;
+    document.getElementById("divSwapScreenInner").style.display = "none";
+    document.getElementById("divSwapConfirmPanel").style.display = "none";
+    document.getElementById("divSwapAddAllowancePanel").style.display = "none";
+    document.getElementById("divSwapRemoveAllowancePanel").style.display = "block";
+    var contractAddr = getSwapContractAddress(fromValue);
+    var aEl = document.getElementById("aRemoveAllowanceContract");
+    if (aEl) { aEl.textContent = contractAddr; aEl.setAttribute("data-contract-address", contractAddr); }
+    document.getElementById("txtRemoveAllowanceGasLimit").value = "210000";
+    document.getElementById("divRemoveAllowanceError").style.display = "none";
+    document.getElementById("divRemoveAllowanceError").textContent = "";
+    setRemoveAllowancePanelWaiting(false);
+    (async function () {
+        try {
+            var approveGasPayload = {
+                rpcEndpoint: currentBlockchainNetwork.rpcEndpoint,
+                chainId: parseInt(currentBlockchainNetwork.networkId, 10),
+                fromTokenValue: fromValue,
+                fromAddress: currentWalletAddress,
+                amount: "0",
+                fromDecimals: getSwapTokenDecimals(fromValue)
+            };
+            var res = await getSwapEstimateApproveGas(approveGasPayload);
+            if (res && res.success && res.gasLimit) document.getElementById("txtRemoveAllowanceGasLimit").value = res.gasLimit;
+        } catch (e) { /* keep default */ }
+        updateRemoveAllowanceGasFeeLabel();
+    })();
+    return false;
+}
+
+function onRemoveAllowanceRemoveClick() {
+    var contractAddr = getSwapContractAddress(document.getElementById("ddlSwapFromToken").value);
+    var msg = (langJson && langJson.langValues && langJson.langValues["remove-allowance-confirm-message"]) ? langJson.langValues["remove-allowance-confirm-message"] : "You are removing allowance for contract [CONTRACT_ID]";
+    msg = msg.replace("[CONTRACT_ID]", contractAddr);
+    showAllowanceConfirmDialog(msg, "remove");
+    return false;
+}
+
+function setAddAllowanceQuantityToMax() {
+    document.getElementById("txtAddAllowanceQuantity").value = "999999999999999999";
+    onAddAllowanceQuantityInput();
+    return false;
+}
+
+function onAddAllowanceQuantityInput() {
+    if (!currentBlockchainNetwork) return;
+    var fromValue = document.getElementById("ddlSwapFromToken").value;
+    var amount = (document.getElementById("txtAddAllowanceQuantity").value || "").trim();
+    if (!amount || parseFloat(amount) <= 0) return;
+    (async function () {
+        try {
+            var payload = {
+                rpcEndpoint: currentBlockchainNetwork.rpcEndpoint,
+                chainId: parseInt(currentBlockchainNetwork.networkId, 10),
+                fromTokenValue: fromValue,
+                fromAddress: currentWalletAddress,
+                amount: amount,
+                fromDecimals: getSwapTokenDecimals(fromValue)
+            };
+            var res = await getSwapEstimateApproveGas(payload);
+            if (res && res.success && res.gasLimit) document.getElementById("txtAddAllowanceGasLimit").value = res.gasLimit;
+        } catch (e) { /* keep default */ }
+        updateAddAllowanceGasFeeLabel();
+    })();
+}
+
+function onAddAllowanceAddClick() {
+    var contractAddr = getSwapContractAddress(document.getElementById("ddlSwapFromToken").value);
+    var msg = (langJson && langJson.langValues && langJson.langValues["add-allowance-confirm-message"]) ? langJson.langValues["add-allowance-confirm-message"] : "You are adding allowance for contract [CONTRACT_ID]";
+    msg = msg.replace("[CONTRACT_ID]", contractAddr);
+    showAllowanceConfirmDialog(msg, "add");
+    return false;
+}
+
+function onSwapConfirmNextClick() {
+    if (swapNeedsApproval) {
+        showSwapApprovalConfirmDialog();
+        return false;
+    }
+    showSwapExecuteConfirmDialog();
+    return false;
+}
+
+function executeSwap() {
+    return onSwapNextClick();
 }
 
 async function refreshTransactionList() {

@@ -135,3 +135,39 @@ async function compareEther(val1, val2) {
     let ret = await FormatApi.send('FormatApiCompareEther', compareRequest);
     return ret;
 }
+
+async function getSwapQuoteAmountsOut(payload) {
+    return await SwapQuoteApi.send('SwapQuoteGetAmountsOut', payload);
+}
+
+async function getSwapQuoteAmountsIn(payload) {
+    return await SwapQuoteApi.send('SwapQuoteGetAmountsIn', payload);
+}
+
+async function getSwapCheckPairExists(payload) {
+    return await SwapQuoteApi.send('SwapQuoteCheckPairExists', payload);
+}
+
+async function getSwapEstimateGas(payload) {
+    return await SwapQuoteApi.send('SwapQuoteEstimateGas', payload);
+}
+
+async function getSwapCheckAllowance(payload) {
+    return await SwapQuoteApi.send('SwapQuoteCheckAllowance', payload);
+}
+
+async function getSwapEstimateApproveGas(payload) {
+    return await SwapQuoteApi.send('SwapQuoteEstimateApproveGas', payload);
+}
+
+async function getSwapApproveContractData(payload) {
+    return await SwapQuoteApi.send('SwapQuoteGetApproveContractData', payload);
+}
+
+async function getSwapRouterAddress() {
+    return await SwapQuoteApi.send('SwapQuoteGetRouterAddress', {});
+}
+
+async function getSwapSwapContractData(payload) {
+    return await SwapQuoteApi.send('SwapQuoteGetSwapContractData', payload);
+}

@@ -1,6 +1,6 @@
-const MAX_BLOCKCHAIN_NETWORK_INDEX_KEY = "MaxBlockchainNetworkIndex3";
-const DEFAULT_BLOCKCHAIN_NETWORK_INDEX_KEY = "DefaultBlockchainNetworkIndex3";
-const BLOCKCHAIN_NETWORK_KEY_PREFIX = "BLOCKCHAIN_NETWORK_2_";
+const MAX_BLOCKCHAIN_NETWORK_INDEX_KEY = "MaxBlockchainNetworkIndex4";
+const DEFAULT_BLOCKCHAIN_NETWORK_INDEX_KEY = "DefaultBlockchainNetworkIndex4";
+const BLOCKCHAIN_NETWORK_KEY_PREFIX = "BLOCKCHAIN_NETWORK_3_";
 const MAX_BLOCKCHAIN_NETWORKS = 100;
 const URL_REGEX_PATTERN = /[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
 
@@ -12,6 +12,10 @@ const isValidDomainName = (supposedDomainName) => {
     if(/localhost:[0-9]{1,5}/.test(supposedDomainName) === true){
         return true;
     }
+    // Allow any IPv4 address with optional port for HTTP (e.g. 192.168.1.1:8545 or 127.0.0.1)
+    if(/^(\d{1,3}\.){3}\d{1,3}(:[0-9]{1,5})?$/.test(supposedDomainName) === true){
+        return true;
+    }
 
     return /^(?!-)[A-Za-z0-9-]+([\-\.]{1}[a-z0-9]+)*\.[A-Za-z]{2,6}$/i.test(
         supposedDomainName
@@ -19,7 +23,7 @@ const isValidDomainName = (supposedDomainName) => {
 };
 
 class BlockchainNetwork {
-    constructor(scanApiDomain, txnApiDomain, blockExplorerDomain, networkId, blockchainName, index) {
+    constructor(scanApiDomain, txnApiDomain, blockExplorerDomain, networkId, blockchainName, rpcEndpoint, index) {
         if (scanApiDomain == null || txnApiDomain == null || blockExplorerDomain == null || networkId == null || blockchainName == null) {
             throw new Error("BlockchainNetwork null values")
         }
@@ -38,11 +42,19 @@ class BlockchainNetwork {
             throw new Error('BlockchainNetwork invalid blockchainName.');
         }
 
+        if (rpcEndpoint == null || rpcEndpoint === "") {
+            rpcEndpoint = "public.rpc.quantumcoinapi.com";
+        }
+        if (isValidDomainName(rpcEndpoint) == false) {
+            throw new Error("BlockchainNetwork invalid rpcEndpoint URL")
+        }
+
         this.scanApiDomain = scanApiDomain;
         this.txnApiDomain = txnApiDomain;
         this.blockExplorerDomain = blockExplorerDomain;
         this.networkId = networkId;
         this.blockchainName = blockchainName;
+        this.rpcEndpoint = rpcEndpoint;
         this.index = index;
     }
 }
@@ -104,7 +116,7 @@ async function blockchainNetworkAddNew(networkJson) {
     let networkItem = JSON.parse(networkJson);
     let maxIndex = await blockchainNetworkGetMaxIndex();
     maxIndex = maxIndex + 1;
-    let blockchainNetwork = new BlockchainNetwork(networkItem.scanApiDomain, networkItem.txnApiDomain, networkItem.blockExplorerDomain, networkItem.networkId, networkItem.blockchainName, maxIndex);    
+    let blockchainNetwork = new BlockchainNetwork(networkItem.scanApiDomain, networkItem.txnApiDomain, networkItem.blockExplorerDomain, networkItem.networkId, networkItem.blockchainName, networkItem.rpcEndpoint, maxIndex);
     let key = BLOCKCHAIN_NETWORK_KEY_PREFIX + maxIndex.toString();
 
     let itemStoreResult = await storageSetItem(key, networkJson);
@@ -127,7 +139,7 @@ async function blockchainNetworksList() {
         let key = BLOCKCHAIN_NETWORK_KEY_PREFIX + i.toString();
         let networkJson = await storageGetItem(key);
         let networkItem = JSON.parse(networkJson);
-        let blockchainNetwork = new BlockchainNetwork(networkItem.scanApiDomain, networkItem.txnApiDomain, networkItem.blockExplorerDomain, networkItem.networkId, networkItem.blockchainName, i);
+        let blockchainNetwork = new BlockchainNetwork(networkItem.scanApiDomain, networkItem.txnApiDomain, networkItem.blockExplorerDomain, networkItem.networkId, networkItem.blockchainName, networkItem.rpcEndpoint, i);
         blockchainIndexToNetworkMap.set(i, blockchainNetwork);
     }
 
