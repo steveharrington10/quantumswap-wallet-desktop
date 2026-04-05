@@ -13,8 +13,7 @@ const path = require('path');
 const sjcl = require('sjcl');
 const fs = require('fs');
 const readline = require('readline');
-const { ethers } = require('ethers');
-const { utils, BigNumber, message } = require('ethers');
+const { parseEther, formatEther, FixedNumber } = require("quantumcoin");
 const crypto = require('crypto');
 const AES_ALGORITHM = 'aes-256-cbc';
 
@@ -170,17 +169,17 @@ ipcMain.handle('CryptoApiScrypt', async (event, data) => {
 })
 
 ipcMain.handle('FormatApiEtherToWei', async (event, data) => {
-    const etherAmount = ethers.parseUnits(data, "ether")
+    const etherAmount = parseEther(data)
     return etherAmount;
 })
 
 ipcMain.handle('FormatApiWeiToEther', async (event, data) => {
-    const etherAmount = ethers.formatEther(data)
+    const etherAmount = formatEther(data)
     return etherAmount;
 })
 
 ipcMain.handle('FormatApiWeiToEtherCommified', async (event, data) => {
-    const etherAmount = ethers.formatEther(data)
+    const etherAmount = formatEther(data)
     return etherAmount.toLocaleString();
 })
 
@@ -189,7 +188,7 @@ ipcMain.handle('FormatApiIsValidEther', async (event, data) => {
         if (data.startsWith("0")) {
             return false;
         }
-        const number = ethers.FixedNumber.fromString(data);
+        const number = FixedNumber.fromString(data);
         let isNegative = number.isNegative();
         return !isNegative;
     }
@@ -200,8 +199,8 @@ ipcMain.handle('FormatApiIsValidEther', async (event, data) => {
 
 ipcMain.handle('FormatApiCompareEther', async (event, data) => {
     try {
-        const number1 = ethers.FixedNumber.fromString(data.num1.replaceAll(",", ""));
-        const number2 = ethers.FixedNumber.fromString(data.num2.replaceAll(",", ""));
+        const number1 = FixedNumber.fromString(data.num1.replaceAll(",", ""));
+        const number2 = FixedNumber.fromString(data.num2.replaceAll(",", ""));
         if (number1.isNegative() || number2.isNegative()) {
             throw new Error("error parsing numbers. negative values.");
         }
