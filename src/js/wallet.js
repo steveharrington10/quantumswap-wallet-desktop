@@ -76,8 +76,9 @@ async function walletGetMaxIndex() {
 }
 
 async function walletKeyPairFromSeed(seedArray) {
-    if (seedArray.length != CRYPTO_SEED_BYTES) {
-        throw new Error('walletKeyPairFromSeed seed array length is not CRYPTO_SEED_BYTES.');
+    const allowedLengths = [64, 72, 96];
+    if (!allowedLengths.includes(seedArray.length)) {
+        throw new Error('walletKeyPairFromSeed: unsupported seed length.');
     }
 
     let result = await walletFromSeed(seedArray);

@@ -50,8 +50,8 @@ async function cryptoRandom(size) {
     return base64ToBytes(base64);
 }
 
-async function cryptoNewSeed() {
-    return cryptoRandom(CRYPTO_SEED_BYTES);
+async function cryptoNewSeed(seedBytes) {
+    return cryptoRandom(seedBytes || CRYPTO_SEED_BYTES);
 }
 
 function cryptoNewAesKey() {

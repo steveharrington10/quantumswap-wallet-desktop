@@ -244,7 +244,14 @@
       "validatorCompletePartialWithdrawalConfirm": "You are completing withdrawal of a previous withdrawal request from your validator account.",
       "validatorPauseValidationConfirm": "You are pausing validation.",
       "validatorResumeValidationConfirm": "You are resuming validation. If your validator node is not running, you might get slashings and loose the deposited coins.",
-      "quantity": "Quantity"
+      "quantity": "Quantity",
+      "select-wallet-type": "Select Wallet Type",
+      "wallet-type-default": "Default",
+      "wallet-type-advanced": "Advanced (20 times higher gas cost)",
+      "select-seed-word-length": "How many seed words do you have?",
+      "seed-length-32": "32 words (A1 to H4)",
+      "seed-length-36": "36 words (A1 to I4)",
+      "seed-length-48": "48 words (A1 to L4)"
     },
     "errors": {
       "error": "An unexpected error occurred. Immediately backup the wallet folder at [STORAGE_PATH]. [ERROR]",

@@ -13,6 +13,7 @@ var currentWalletAddress = "";
 var specificWalletAddress = "";
 var additionalWalletMode = false; //this means first wallet has alredy been created and user is trying to create additional wallet
 var revealSeedArray;
+var currentSeedBytes = 96;
 
 const ADDRESS_TEMPLATE = "[ADDRESS]";
 const SHORT_ADDRESS_TEMPLATE = "[SHORT_ADDRESS]";
@@ -448,9 +449,9 @@ async function walletFormSubmitted() {
 
     if (selectedValue !== "") {
         if (selectedValue === "new_wallet") {
-            await showNewSeedScreen();
+            showWalletTypeScreen();
         } else if (selectedValue === "wallet_from_seed") {
-            showRestoreSeedScreen();
+            showRestoreSeedTypeScreen();
         } else if (selectedValue === "restore_wallet_backup_file") {
             showRestoreWalletScreen();
         }
@@ -462,25 +463,119 @@ async function walletFormSubmitted() {
     }
 }
 
+function showWalletTypeScreen() {
+    document.getElementById('createWalletPromptScreen').style.display = 'none';
+    document.getElementById('walletTypeScreen').style.display = 'block';
+    var radioButtons = document.querySelectorAll('input[name="wallet_type_option"]');
+    radioButtons.forEach(function (radioButton) { radioButton.checked = false; });
+}
+
+function backFromWalletTypeScreen() {
+    document.getElementById('walletTypeScreen').style.display = 'none';
+    document.getElementById('createWalletPromptScreen').style.display = 'block';
+}
+
+function backFromNewSeedScreen() {
+    document.getElementById('newSeedScreen').style.display = 'none';
+    showWalletTypeScreen();
+}
+
+async function walletTypeFormSubmitted() {
+    var radioButtons = document.querySelectorAll('input[name="wallet_type_option"]');
+    var selectedValue = "";
+    radioButtons.forEach(function (radioButton) {
+        if (radioButton.checked) {
+            selectedValue = radioButton.value;
+        }
+    });
+
+    if (selectedValue === "default") {
+        currentSeedBytes = 64;
+    } else if (selectedValue === "advanced") {
+        currentSeedBytes = 72;
+    } else {
+        showWarnAlert(langJson.errors.selectOption);
+        return;
+    }
+
+    document.getElementById('walletTypeScreen').style.display = 'none';
+    await showNewSeedScreen();
+}
+
+function updateSeedRowVisibility(prefix, wordCount) {
+    var totalRows = wordCount / 4;
+    for (var i = 1; i <= 12; i++) {
+        var el = document.getElementById(prefix + i);
+        if (el) el.style.display = (i <= totalRows) ? "" : "none";
+    }
+}
+
 async function showNewSeedScreen() {
-    tempSeedArray = await cryptoNewSeed();
+    tempSeedArray = await cryptoNewSeed(currentSeedBytes);
 
     document.getElementById('createWalletPromptScreen').style.display = 'none';
+    document.getElementById('walletTypeScreen').style.display = 'none';
     document.getElementById('newSeedScreen').style.display = 'block';
     document.getElementById("divSeedHelp").style.display = "block";
     document.getElementById("divSeedPanel").style.display = "none";
     document.getElementById("divNewSeedButtons").style.display = "none";
 
+    var wordCount = tempSeedArray.length / 2;
     var wordList = getWordListFromSeedArray(tempSeedArray);
-    for (let i = 0; i < SEED_LENGTH / 2; i++) {
+    for (let i = 0; i < wordCount; i++) {
         document.getElementById("divNewSeed" + i).textContent = wordList[i].toUpperCase();
-    }    
+    }
+    updateSeedRowVisibility("newSeedRowHead", wordCount);
 
     document.getElementById('aRevealSeed').focus();
 }
 
-function showRestoreSeedScreen() {
+function showRestoreSeedTypeScreen() {
     document.getElementById('createWalletPromptScreen').style.display = 'none';
+    document.getElementById('restoreSeedTypeScreen').style.display = 'block';
+    var radioButtons = document.querySelectorAll('input[name="seed_length_option"]');
+    radioButtons.forEach(function (radioButton) { radioButton.checked = false; });
+}
+
+function backFromRestoreSeedTypeScreen() {
+    document.getElementById('restoreSeedTypeScreen').style.display = 'none';
+    document.getElementById('createWalletPromptScreen').style.display = 'block';
+}
+
+function backFromRestoreSeedScreen() {
+    document.getElementById('restoreSeedScreen').style.display = 'none';
+    showRestoreSeedTypeScreen();
+}
+
+function restoreSeedTypeFormSubmitted() {
+    var radioButtons = document.querySelectorAll('input[name="seed_length_option"]');
+    var selectedValue = "";
+    radioButtons.forEach(function (radioButton) {
+        if (radioButton.checked) {
+            selectedValue = radioButton.value;
+        }
+    });
+
+    if (selectedValue === "32") {
+        currentSeedBytes = 64;
+    } else if (selectedValue === "36") {
+        currentSeedBytes = 72;
+    } else if (selectedValue === "48") {
+        currentSeedBytes = 96;
+    } else {
+        showWarnAlert(langJson.errors.selectOption);
+        return;
+    }
+
+    document.getElementById('restoreSeedTypeScreen').style.display = 'none';
+    showRestoreSeedScreen();
+}
+
+function showRestoreSeedScreen() {
+    var wordCount = currentSeedBytes / 2;
+
+    document.getElementById('createWalletPromptScreen').style.display = 'none';
+    document.getElementById('restoreSeedTypeScreen').style.display = 'none';
     document.getElementById('newSeedScreen').style.display = 'none';
     document.getElementById("divSeedHelp").style.display = "none";
     document.getElementById("divSeedPanel").style.display = "none";
@@ -509,23 +604,26 @@ function showRestoreSeedScreen() {
             autoCompleteBoxesRestore[i].reset();
         }
     }
+    updateSeedRowVisibility("restoreSeedRowHead", wordCount);
 
     document.getElementById('txtRestoreSeedA1').focus();
 }
 
 async function copyNewSeed() {
+    var wordCount = tempSeedArray.length / 2;
     var wordList = getWordListFromSeedArray(tempSeedArray);
     var copyText = SEED_FRIENDLY_INDEX_ARRAY[0].toUpperCase() + " = " + wordList[0].toUpperCase() + "\r\n";
-    for (let i = 1; i < SEED_LENGTH / 2; i++) {
+    for (let i = 1; i < wordCount; i++) {
         copyText = copyText + SEED_FRIENDLY_INDEX_ARRAY[i].toUpperCase() + " = " + wordList[i].toUpperCase() + "\r\n";
     }
     await WriteTextToClipboard(copyText);
 }
 
 async function copyRevealSeed() {
+    var wordCount = revealSeedArray.length / 2;
     var wordList = getWordListFromSeedArray(revealSeedArray);
     var copyText = SEED_FRIENDLY_INDEX_ARRAY[0].toUpperCase() + " = " + wordList[0].toUpperCase() + "\r\n";
-    for (let i = 1; i < SEED_LENGTH / 2; i++) {
+    for (let i = 1; i < wordCount; i++) {
         copyText = copyText + SEED_FRIENDLY_INDEX_ARRAY[i].toUpperCase() + " = " + wordList[i].toUpperCase() + "\r\n";
     }
     await WriteTextToClipboard(copyText);
@@ -539,6 +637,8 @@ function showSeedPanel() {
 }
 
 function showVerifySeedPanel() {
+    var wordCount = tempSeedArray.length / 2;
+
     for (i = 0; i < SEED_FRIENDLY_INDEX_ARRAY.length; i++) {
         document.getElementById("txtSeed" + SEED_FRIENDLY_INDEX_ARRAY[i].toUpperCase()).textContent = "";
     }
@@ -564,14 +664,16 @@ function showVerifySeedPanel() {
             autoCompleteBoxes[i].reset();
         }
     }
+    updateSeedRowVisibility("verifySeedRowHead", wordCount);
     document.getElementById('txtSeedA1').focus();
 
     return false;
 }
 
 function verifySeedWords() {
-    var seedWords = new Array(SEED_LENGTH / 2);
-    for (i = 0; i < SEED_FRIENDLY_INDEX_ARRAY.length; i++) {
+    var wordCount = tempSeedArray.length / 2;
+    var seedWords = new Array(wordCount);
+    for (i = 0; i < wordCount; i++) {
         var seedWord = document.getElementById("txtSeed" + SEED_FRIENDLY_INDEX_ARRAY[i].toUpperCase()).textContent;
         var seedIndexFriedly = getFriendlySeedIndex(i).toUpperCase();
 
@@ -763,8 +865,9 @@ async function encryptAndBackupCurrentWallet() {
 }
 
 function restoreSeed() {
-    var seedWords = new Array(SEED_LENGTH / 2);
-    for (i = 0; i < SEED_FRIENDLY_INDEX_ARRAY.length; i++) {
+    var wordCount = currentSeedBytes / 2;
+    var seedWords = new Array(wordCount);
+    for (i = 0; i < wordCount; i++) {
         var seedWord = document.getElementById("txtRestoreSeed" + SEED_FRIENDLY_INDEX_ARRAY[i].toUpperCase()).textContent;
         var seedIndexFriedly = getFriendlySeedIndex(i).toUpperCase();
 
@@ -1016,9 +1119,11 @@ async function revealSeedWallet() {
         return;
     }
 
-    for (let i = 0; i < SEED_LENGTH / 2; i++) {
+    var wordCount = revealSeedArray.length / 2;
+    for (let i = 0; i < wordCount; i++) {
         document.getElementById("divRevealSeed" + i).textContent = wordList[i].toUpperCase();
-    }    
+    }
+    updateSeedRowVisibility("revealSeedRowHead", wordCount);
 
     document.getElementById("divRevealSeedHelp").style.display = "none";
     document.getElementById("divRevealButton").style.display = "none";
@@ -1162,6 +1267,8 @@ function backFromCreateOrRestoreWallet() {
 
 function backToCreateWalletPromptScreen() {
     document.getElementById('createWalletPromptScreen').style.display = 'block';
+    document.getElementById('walletTypeScreen').style.display = 'none';
+    document.getElementById('restoreSeedTypeScreen').style.display = 'none';
     document.getElementById('restoreSeedScreen').style.display = 'none';
     document.getElementById('newSeedScreen').style.display = 'none';
     document.getElementById('restoreWalletScreen').style.display = 'none';
