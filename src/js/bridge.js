@@ -157,3 +157,31 @@ async function submitStakingContract(payload) {
 async function offlineSignStakingContract(payload) {
     return await SwapQuoteApi.send('StakingContractOfflineSign', payload);
 }
+
+async function cryptoRandomBytes(size) {
+    return await CryptoApi.send('CryptoRandomBytes', size);
+}
+
+async function walletFromSeed(seedArray) {
+    return await CryptoApi.send('WalletFromSeed', { seed: Array.from(seedArray) });
+}
+
+async function walletEncryptJson(privateKeyBase64, publicKeyBase64, passphrase) {
+    return await CryptoApi.send('WalletEncryptJson', {
+        privateKey: privateKeyBase64,
+        publicKey: publicKeyBase64,
+        passphrase: passphrase
+    });
+}
+
+async function walletDecryptJson(json, passphrase) {
+    return await CryptoApi.send('WalletDecryptJson', { json: json, passphrase: passphrase });
+}
+
+async function computeAddressFromPublicKey(publicKeyBase64) {
+    return await CryptoApi.send('ComputeAddress', publicKeyBase64);
+}
+
+async function scryptDerive(secret, saltBase64) {
+    return await CryptoApi.send('ScryptDerive', { secret: secret, salt: saltBase64 });
+}

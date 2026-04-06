@@ -81,8 +81,8 @@ async function increaseDepositSubmit(quantumWallet) {
             methodArgs: [],
             value: validatorDepositCoins,
             gasLimit: INCREASE_DEPOSIT_GAS,
-            privateKey: quantumWallet.getPrivateKey(),
-            publicKey: quantumWallet.getPublicKey()
+            privateKey: await quantumWallet.getPrivateKey(),
+            publicKey: await quantumWallet.getPublicKey()
         });
 
         if (result && result.success && result.txHash) {
@@ -123,8 +123,8 @@ async function increaseDepositOfflineSign(quantumWallet) {
             value: validatorDepositCoins,
             gasLimit: INCREASE_DEPOSIT_GAS,
             nonce: parseInt(currentNonce),
-            privateKey: quantumWallet.getPrivateKey(),
-            publicKey: quantumWallet.getPublicKey()
+            privateKey: await quantumWallet.getPrivateKey(),
+            publicKey: await quantumWallet.getPublicKey()
         });
 
         if (result && result.success && result.txData) {

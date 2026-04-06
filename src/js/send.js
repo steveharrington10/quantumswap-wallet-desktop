@@ -126,14 +126,14 @@ async function signOfflineSend() {
         CoinTokenToSendName = "coins";
     } else {
         let contractAddress = document.getElementById("txtTokenContractAddress").value;
-        if (contractAddress == null || contractAddress.length < ADDRESS_LENGTH_CHECK || IsValidAddress(contractAddress) == false) {
+        if (contractAddress == null || contractAddress.length < ADDRESS_LENGTH_CHECK || await IsValidAddress(contractAddress) == false) {
             showWarnAlert(langJson.errors.quantumAddr);
             return false;
         }
         CoinTokenToSendName = "tokens";
     }
 
-    if (sendAddress == null || sendAddress.length < ADDRESS_LENGTH_CHECK || IsValidAddress(sendAddress) == false) {
+    if (sendAddress == null || sendAddress.length < ADDRESS_LENGTH_CHECK || await IsValidAddress(sendAddress) == false) {
         showWarnAlert(langJson.errors.quantumAddr);
         return false;
     }
@@ -211,8 +211,8 @@ async function signOfflineTxnSendToken(quantumWallet) {
             fromDecimals: getSwapTokenDecimals(contractAddress),
             nonce: parseInt(currentNonce),
             gasLimit: TOKEN_SEND_GAS,
-            privateKey: quantumWallet.getPrivateKey(),
-            publicKey: quantumWallet.getPublicKey()
+            privateKey: await quantumWallet.getPrivateKey(),
+            publicKey: await quantumWallet.getPublicKey()
         });
 
         if (!result || !result.success || !result.txData) {
@@ -252,8 +252,8 @@ async function signOfflineTxnSend(quantumWallet) {
             amount: sendQuantity,
             nonce: parseInt(currentNonce),
             gasLimit: COIN_SEND_GAS,
-            privateKey: quantumWallet.getPrivateKey(),
-            publicKey: quantumWallet.getPublicKey()
+            privateKey: await quantumWallet.getPrivateKey(),
+            publicKey: await quantumWallet.getPublicKey()
         });
 
         if (!result || !result.success || !result.txData) {
@@ -291,7 +291,7 @@ async function sendCoins() {
     var contractAddress = document.getElementById("divCoinTokenToSend").textContent;
     let quantityToSend = "";
 
-    if (sendAddress == null || sendAddress.length < ADDRESS_LENGTH_CHECK || IsValidAddress(sendAddress) == false) {
+    if (sendAddress == null || sendAddress.length < ADDRESS_LENGTH_CHECK || await IsValidAddress(sendAddress) == false) {
         showWarnAlert(langJson.errors.quantumAddr);
         return false;
     }
@@ -379,8 +379,8 @@ async function sendCoinsSubmit(quantumWallet) {
             chainId: parseInt(currentBlockchainNetwork.networkId, 10),
             toAddress: sendAddress,
             amount: sendQuantity,
-            privateKey: quantumWallet.getPrivateKey(),
-            publicKey: quantumWallet.getPublicKey(),
+            privateKey: await quantumWallet.getPrivateKey(),
+            publicKey: await quantumWallet.getPublicKey(),
             gasLimit: COIN_SEND_GAS
         });
 
@@ -425,8 +425,8 @@ async function sendTokensSubmit(quantumWallet) {
             amount: sendQuantity,
             contractAddress: contractAddress,
             fromDecimals: getSwapTokenDecimals(contractAddress),
-            privateKey: quantumWallet.getPrivateKey(),
-            publicKey: quantumWallet.getPublicKey(),
+            privateKey: await quantumWallet.getPrivateKey(),
+            publicKey: await quantumWallet.getPublicKey(),
             gasLimit: TOKEN_SEND_GAS
         });
 

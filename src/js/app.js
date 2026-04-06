@@ -65,25 +65,6 @@ let currentWalletTokenList = [];
 let currentAccountDetails = null;
 let offlineSignEnabled = false;
 
-function InitAccountsWebAssembly() {
-    if (!WebAssembly.instantiateStreaming) {
-        WebAssembly.instantiateStreaming = async (resp, importObject) => {
-            const source = await (await resp).arrayBuffer();
-            return await WebAssembly.instantiate(source, importObject);
-        };
-    }
-
-    const go = new Go();
-    let mod, inst;
-    WebAssembly.instantiateStreaming(fetch("lib/dp/libgodp.wasm"), go.importObject).then(
-        async result => {
-            mod = result.module;
-            inst = result.instance;
-            await go.run(inst);
-        }
-    );
-}
-
 function checkDuplicateIds() {
     var nodes = document.querySelectorAll('[id]');
     var idList = new Map();
@@ -119,7 +100,6 @@ async function initApp() {
     let appVersion = await GetAppVersion();
     document.title = langJson.langValues.title + " " + appVersion;
 
-    InitAccountsWebAssembly();
     let seedInit = await initializeSeedWordsFromUrl("lib/seedwords/seedwords.txt");
     if (seedInit == false) {
         throw new Error(langJson.errors.seedInitError);
@@ -455,7 +435,7 @@ function showCreateWalletPromptScreen() {
     document.getElementById('optNewWallet').focus();
 }
 
-function walletFormSubmitted() {
+async function walletFormSubmitted() {
     const radioButtons = document.querySelectorAll('input[name="wallet_option"]');
 
     let selectedValue = "";
@@ -468,7 +448,7 @@ function walletFormSubmitted() {
 
     if (selectedValue !== "") {
         if (selectedValue === "new_wallet") {
-            showNewSeedScreen();
+            await showNewSeedScreen();
         } else if (selectedValue === "wallet_from_seed") {
             showRestoreSeedScreen();
         } else if (selectedValue === "restore_wallet_backup_file") {
@@ -482,8 +462,8 @@ function walletFormSubmitted() {
     }
 }
 
-function showNewSeedScreen() {
-    tempSeedArray = cryptoNewSeed();
+async function showNewSeedScreen() {
+    tempSeedArray = await cryptoNewSeed();
 
     document.getElementById('createWalletPromptScreen').style.display = 'none';
     document.getElementById('newSeedScreen').style.display = 'block';
@@ -765,7 +745,7 @@ function backupCurrentWallet() {
 }
 
 async function encryptAndBackupCurrentWallet() {
-    let walletJson = walletGetAccountJsonFromWallet(currentWallet, tempPassword);
+    let walletJson = await walletGetAccountJsonFromWallet(currentWallet, tempPassword);
 
     var isoStr = new Date().toISOString();
     isoStr = isoStr.replaceAll(":", "-");
@@ -824,7 +804,7 @@ function restoreWalletFromFile() {
 async function restoreWalletFileOpen() {
     var file_to_read = document.getElementById("filRestoreWallet").files[0];
     var fileread = new FileReader();
-    fileread.onload = function (e) {
+    fileread.onload = async function (e) {
         var walletJson = e.target.result;      
 
         try {            
@@ -834,7 +814,7 @@ async function restoreWalletFileOpen() {
             }
             
             var walletPassword = document.getElementById("pwdRestoreWallet").value;
-            currentWallet = walletCreateNewWalletFromJson(walletJson, walletPassword);
+            currentWallet = await walletCreateNewWalletFromJson(walletJson, walletPassword);
 
             hideWaitingBox();
             showVerifyWalletPasswordScreen();
@@ -951,7 +931,7 @@ async function encryptAndBackupSpecificWallet() {
         showWarnAlert(langJson.errors.walletOpenError.replace(STORAGE_PATH_TEMPLATE, STORAGE_PATH) + " " + error)
         return;
     }
-    let walletJson = walletGetAccountJsonFromWallet(specificWallet, password);
+    let walletJson = await walletGetAccountJsonFromWallet(specificWallet, password);
 
     var isoStr = new Date().toISOString();
     isoStr = isoStr.replaceAll(":", "-");
@@ -2297,8 +2277,8 @@ async function submitSwapApprovalTransaction(quantumWallet) {
             fromTokenValue: fromValue,
             amount: approvalAmount,
             fromDecimals: getSwapTokenDecimals(fromValue),
-            privateKey: quantumWallet.getPrivateKey(),
-            publicKey: quantumWallet.getPublicKey(),
+            privateKey: await quantumWallet.getPrivateKey(),
+            publicKey: await quantumWallet.getPublicKey(),
             gasLimit: gas
         });
         if (!result || !result.success || !result.txHash) {
@@ -2336,8 +2316,8 @@ async function submitSwapTransaction(quantumWallet) {
             fromDecimals: getSwapTokenDecimals(fromValue),
             toDecimals: getSwapTokenDecimals(toValue),
             recipientAddress: currentWalletAddress,
-            privateKey: quantumWallet.getPrivateKey(),
-            publicKey: quantumWallet.getPublicKey(),
+            privateKey: await quantumWallet.getPrivateKey(),
+            publicKey: await quantumWallet.getPublicKey(),
             gasLimit: gas
         });
         if (!result || !result.success || !result.txHash) {
@@ -2368,8 +2348,8 @@ async function submitRemoveAllowanceTransaction(quantumWallet) {
             rpcEndpoint: currentBlockchainNetwork.rpcEndpoint,
             chainId: parseInt(currentBlockchainNetwork.networkId, 10),
             fromTokenValue: fromValue,
-            privateKey: quantumWallet.getPrivateKey(),
-            publicKey: quantumWallet.getPublicKey(),
+            privateKey: await quantumWallet.getPrivateKey(),
+            publicKey: await quantumWallet.getPublicKey(),
             gasLimit: gas
         });
         if (!result || !result.success || !result.txHash) {
@@ -2405,8 +2385,8 @@ async function submitAddAllowanceTransaction(quantumWallet) {
             fromTokenValue: fromValue,
             amount: approvalAmount,
             fromDecimals: getSwapTokenDecimals(fromValue),
-            privateKey: quantumWallet.getPrivateKey(),
-            publicKey: quantumWallet.getPublicKey(),
+            privateKey: await quantumWallet.getPrivateKey(),
+            publicKey: await quantumWallet.getPublicKey(),
             gasLimit: gas
         });
         if (!result || !result.success || !result.txHash) {
