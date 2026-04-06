@@ -379,11 +379,43 @@
             </div>
         </div>
 
+        <div class="content" id="walletTypeScreen" style="display: none;">
+            <div class="center-content">
+                <div class="center-content-rounded-container">
+                    <div class="back-container" role="button" onclick="backFromWalletTypeScreen()" tabindex="6">
+
+                    </div>
+                    <div class="roundex-box">
+                        <div class="safety_question_container"></div>
+                        <div class="heading bold large" data-lang-key="select-wallet-type">Select Wallet Type</div>
+                        <div class="divider"></div>
+                        <div class="tab-name" data-lang-key="select-an-option" tabindex="1">
+                            Select an option
+                        </div>
+                        <form id="walletTypeForm" style="display: flex; flex-direction: column; gap: 10px;">
+                            <div class="tab-label" style="text-align: left; cursor: pointer;" onclick="document.getElementById('optWalletTypeDefault').checked = true;">
+                                <input type="radio" name="wallet_type_option" value="default" class="safety_quiz_option" id="optWalletTypeDefault" tabindex="2">
+                                <label data-lang-key="wallet-type-default" style="cursor: pointer;">Default</label>
+                            </div>
+                            <div class="tab-label" style="text-align: left; cursor: pointer;" onclick="document.getElementById('optWalletTypeAdvanced').checked = true;">
+                                <input type="radio" name="wallet_type_option" value="advanced" class="safety_quiz_option" id="optWalletTypeAdvanced" tabindex="3">
+                                <label data-lang-key="wallet-type-advanced" style="cursor: pointer;">Advanced (20 times higher gas cost)</label>
+                            </div>
+                        </form>
+                        <div class="divider"></div>
+                        <div class="large_button_container heading large" onclick="walletTypeFormSubmitted()" data-lang-key="next" role="button" tabindex="4">
+                            Next
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
 
         <div class="content" id="newSeedScreen" style="display: none;">
             <div class="center-content">
                 <div class="center-content-rounded-container" style="width:95%;">
-                    <div class="back-container" role="button" onclick="backToCreateWalletPromptScreen()" tabindex="5">
+                    <div class="back-container" role="button" onclick="backFromNewSeedScreen()" tabindex="5">
 
                     </div>
                     <div class="roundex-box-middle" style="padding-top: 15px; padding-bottom: 15px;">
@@ -405,7 +437,7 @@
                                 <div class="tab-pane fade active show" id="newSeedScreenPanel" role="tabpanel">
                                     <div class="divSeedTable">
                                         <div class="divSeedBody" tabindex="2">
-                                            <div class="seedrowhead1">
+                                            <div class="seedrowhead1" id="newSeedRowHead1">
                                                 <div class="seedCell">
                                                     <div>A1</div>
                                                     <div class="seedrow1" id="divNewSeed0">HELLOWORLD</div>
@@ -423,7 +455,7 @@
                                                     <div class="seedrow1" id="divNewSeed3">MOTIVATE</div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead2">
+                                            <div class="seedrowhead2" id="newSeedRowHead2">
                                                 <div class="seedCell">
                                                     <div>B1</div>
                                                     <div class="seedrow2" id="divNewSeed4">BICYCLE</div>
@@ -441,7 +473,7 @@
                                                     <div class="seedrow2" id="divNewSeed7">PINGPONG</div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead3">
+                                            <div class="seedrowhead3" id="newSeedRowHead3">
                                                 <div class="seedCell">
                                                     <div>C1</div>
                                                     <div class="seedrow3" id="divNewSeed8">PINTHAT</div>
@@ -459,7 +491,7 @@
                                                     <div class="seedrow3" id="divNewSeed11">OKFINE</div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead4">
+                                            <div class="seedrowhead4" id="newSeedRowHead4">
                                                 <div class="seedCell">
                                                     <div>D1</div>
                                                     <div class="seedrow4" id="divNewSeed12">NAVY</div>
@@ -477,7 +509,7 @@
                                                     <div class="seedrow4" id="divNewSeed15">WITHER</div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead5">
+                                            <div class="seedrowhead5" id="newSeedRowHead5">
                                                 <div class="seedCell">
                                                     <div>E1</div>
                                                     <div class="seedrow5" id="divNewSeed16">OK</div>
@@ -495,7 +527,7 @@
                                                     <div class="seedrow5" id="divNewSeed19">CHOCOLATE</div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead6">
+                                            <div class="seedrowhead6" id="newSeedRowHead6">
                                                 <div class="seedCell">
                                                     <div>F1</div>
                                                     <div class="seedrow6" id="divNewSeed20">MILKSWEET</div>
@@ -513,7 +545,7 @@
                                                     <div class="seedrow6" id="divNewSeed23">HONEY</div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead7">
+                                            <div class="seedrowhead7" id="newSeedRowHead7">
                                                 <div class="seedCell">
                                                     <div>G1</div>
                                                     <div class="seedrow7" id="divNewSeed24">PINEAPPLE</div>
@@ -531,7 +563,7 @@
                                                     <div class="seedrow7" id="divNewSeed27">PINTBUG</div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead8">
+                                            <div class="seedrowhead8" id="newSeedRowHead8">
                                                 <div class="seedCell">
                                                     <div>H1</div>
                                                     <div class="seedrow8" id="divNewSeed28">MICROWIN</div>
@@ -549,7 +581,7 @@
                                                     <div class="seedrow8" id="divNewSeed31">WHYNOT</div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead9">
+                                            <div class="seedrowhead9" id="newSeedRowHead9">
                                                 <div class="seedCell">
                                                     <div>I1</div>
                                                     <div class="seedrow9" id="divNewSeed32">HELLOWORLD</div>
@@ -567,7 +599,7 @@
                                                     <div class="seedrow9" id="divNewSeed35">WHO</div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead10">
+                                            <div class="seedrowhead10" id="newSeedRowHead10">
                                                 <div class="seedCell">
                                                     <div>J1</div>
                                                     <div class="seedrow10" id="divNewSeed36">WHOM</div>
@@ -585,7 +617,7 @@
                                                     <div class="seedrow10" id="divNewSeed39">TAKECARE</div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead11">
+                                            <div class="seedrowhead11" id="newSeedRowHead11">
                                                 <div class="seedCell">
                                                     <div>K1</div>
                                                     <div class="seedrow11" id="divNewSeed40">BLITLINE</div>
@@ -603,7 +635,7 @@
                                                     <div class="seedrow11" id="divNewSeed43">HASTILY</div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead12">
+                                            <div class="seedrowhead12" id="newSeedRowHead12">
                                                 <div class="seedCell">
                                                     <div>L1</div>
                                                     <div class="seedrow12" id="divNewSeed44">PATIO</div>
@@ -656,7 +688,7 @@
                                 <div class="tab-pane fade active show" id="verifySeedScreenPanel" role="tabpanel">
                                     <div class="divSeedTable">
                                         <div class="divSeedBody">
-                                            <div class="seedrowhead1">
+                                            <div class="seedrowhead1" id="verifySeedRowHead1">
                                                 <div class="seedCell">
                                                     <div>A1</div>
                                                     <div class="seedrow1"><div class="entrybox edit-div" contenteditable="true" id="txtSeedA1"></div></div>
@@ -674,7 +706,7 @@
                                                     <div class="seedrow1"><div class="entrybox edit-div" contenteditable="true" id="txtSeedA4" ></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead2">
+                                            <div class="seedrowhead2" id="verifySeedRowHead2">
                                                 <div class="seedCell">
                                                     <div>B1</div>
                                                     <div class="seedrow2"><div class="entrybox edit-div" contenteditable="true" id="txtSeedB1" ></div></div>
@@ -692,7 +724,7 @@
                                                     <div class="seedrow2"><div class="entrybox edit-div" contenteditable="true" id="txtSeedB4" ></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead3">
+                                            <div class="seedrowhead3" id="verifySeedRowHead3">
                                                 <div class="seedCell">
                                                     <div>C1</div>
                                                     <div class="seedrow3"><div class="entrybox edit-div" contenteditable="true" id="txtSeedC1" ></div></div>
@@ -710,7 +742,7 @@
                                                     <div class="seedrow3"><div class="entrybox edit-div" contenteditable="true" id="txtSeedC4" ></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead4">
+                                            <div class="seedrowhead4" id="verifySeedRowHead4">
                                                 <div class="seedCell">
                                                     <div>D1</div>
                                                     <div class="seedrow4"><div class="entrybox edit-div" contenteditable="true" id="txtSeedD1" ></div></div>
@@ -728,7 +760,7 @@
                                                     <div class="seedrow4"><div class="entrybox edit-div" contenteditable="true" id="txtSeedD4" ></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead5">
+                                            <div class="seedrowhead5" id="verifySeedRowHead5">
                                                 <div class="seedCell">
                                                     <div>E1</div>
                                                     <div class="seedrow5"><div class="entrybox edit-div" contenteditable="true" id="txtSeedE1" ></div></div>
@@ -746,7 +778,7 @@
                                                     <div class="seedrow5"><div class="entrybox edit-div" contenteditable="true" id="txtSeedE4" ></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead6">
+                                            <div class="seedrowhead6" id="verifySeedRowHead6">
                                                 <div class="seedCell">
                                                     <div>F1</div>
                                                     <div class="seedrow6"><div class="entrybox edit-div" contenteditable="true" id="txtSeedF1" ></div></div>
@@ -764,7 +796,7 @@
                                                     <div class="seedrow6"><div class="entrybox edit-div" contenteditable="true" id="txtSeedF4" ></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead7">
+                                            <div class="seedrowhead7" id="verifySeedRowHead7">
                                                 <div class="seedCell">
                                                     <div>G1</div>
                                                     <div class="seedrow7"><div class="entrybox edit-div" contenteditable="true" id="txtSeedG1" ></div></div>
@@ -782,7 +814,7 @@
                                                     <div class="seedrow7"><div class="entrybox edit-div" contenteditable="true" id="txtSeedG4" ></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead8">
+                                            <div class="seedrowhead8" id="verifySeedRowHead8">
                                                 <div class="seedCell">
                                                     <div>H1</div>
                                                     <div class="seedrow8"><div class="entrybox edit-div" contenteditable="true" id="txtSeedH1" ></div></div>
@@ -800,7 +832,7 @@
                                                     <div class="seedrow8"><div class="entrybox edit-div" contenteditable="true" id="txtSeedH4" ></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead9">
+                                            <div class="seedrowhead9" id="verifySeedRowHead9">
                                                 <div class="seedCell">
                                                     <div>I1</div>
                                                     <div class="seedrow9"><div class="entrybox edit-div" contenteditable="true" id="txtSeedI1" ></div></div>
@@ -818,7 +850,7 @@
                                                     <div class="seedrow9"><div class="entrybox edit-div" contenteditable="true" id="txtSeedI4" ></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead10">
+                                            <div class="seedrowhead10" id="verifySeedRowHead10">
                                                 <div class="seedCell">
                                                     <div>J1</div>
                                                     <div class="seedrow10"><div class="entrybox edit-div" contenteditable="true" id="txtSeedJ1" ></div></div>
@@ -836,7 +868,7 @@
                                                     <div class="seedrow10"><div class="entrybox edit-div" contenteditable="true" id="txtSeedJ4" ></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead11">
+                                            <div class="seedrowhead11" id="verifySeedRowHead11">
                                                 <div class="seedCell">
                                                     <div>K1</div>
                                                     <div class="seedrow11"><div class="entrybox edit-div" contenteditable="true" id="txtSeedK1" ></div></div>
@@ -854,7 +886,7 @@
                                                     <div class="seedrow11"><div class="entrybox edit-div" contenteditable="true" id="txtSeedK4" ></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead12">
+                                            <div class="seedrowhead12" id="verifySeedRowHead12">
                                                 <div class="seedCell">
                                                     <div>L1</div>
                                                     <div class="seedrow12"><div class="entrybox edit-div" contenteditable="true" id="txtSeedL1" ></div></div>
@@ -886,10 +918,46 @@
             </div>
         </div>
 
+        <div class="content" id="restoreSeedTypeScreen" style="display: none;">
+            <div class="center-content">
+                <div class="center-content-rounded-container">
+                    <div class="back-container" role="button" onclick="backFromRestoreSeedTypeScreen()" tabindex="6">
+
+                    </div>
+                    <div class="roundex-box">
+                        <div class="safety_question_container"></div>
+                        <div class="heading bold large" data-lang-key="select-seed-word-length">How many seed words do you have?</div>
+                        <div class="divider"></div>
+                        <div class="tab-name" data-lang-key="select-an-option" tabindex="1">
+                            Select an option
+                        </div>
+                        <form id="restoreSeedTypeForm" style="display: flex; flex-direction: column; gap: 10px;">
+                            <div class="tab-label" style="text-align: left; cursor: pointer;" onclick="document.getElementById('optSeedLength32').checked = true;">
+                                <input type="radio" name="seed_length_option" value="32" class="safety_quiz_option" id="optSeedLength32" tabindex="2">
+                                <label data-lang-key="seed-length-32" style="cursor: pointer;">32 words (A1 to H4)</label>
+                            </div>
+                            <div class="tab-label" style="text-align: left; cursor: pointer;" onclick="document.getElementById('optSeedLength36').checked = true;">
+                                <input type="radio" name="seed_length_option" value="36" class="safety_quiz_option" id="optSeedLength36" tabindex="3">
+                                <label data-lang-key="seed-length-36" style="cursor: pointer;">36 words (A1 to I4)</label>
+                            </div>
+                            <div class="tab-label" style="text-align: left; cursor: pointer;" onclick="document.getElementById('optSeedLength48').checked = true;">
+                                <input type="radio" name="seed_length_option" value="48" class="safety_quiz_option" id="optSeedLength48" tabindex="4">
+                                <label data-lang-key="seed-length-48" style="cursor: pointer;">48 words (A1 to L4)</label>
+                            </div>
+                        </form>
+                        <div class="divider"></div>
+                        <div class="large_button_container heading large" onclick="restoreSeedTypeFormSubmitted()" data-lang-key="next" role="button" tabindex="5">
+                            Next
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="content" id="restoreSeedScreen" style="display: none;">
             <div class="center-content">
                 <div class="center-content-rounded-container" style="width:95%;">
-                    <div class="back-container" role="button" onclick="backToCreateWalletPromptScreen()" tabindex="50">
+                    <div class="back-container" role="button" onclick="backFromRestoreSeedScreen()" tabindex="50">
 
                     </div>
                     <div class="roundex-box-middle" style="padding-top: 15px; padding-bottom: 15px;">
@@ -902,7 +970,7 @@
                                 <div class="tab-pane fade active show" id="restoreSeedScreenPanel" role="tabpanel">
                                     <div class="divSeedTable">
                                         <div class="divSeedBody">
-                                            <div class="seedrowhead1">
+                                            <div class="seedrowhead1" id="restoreSeedRowHead1">
                                                 <div class="seedCell">
                                                     <div>A1</div>
                                                     <div class="seedrow1"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedA1"></div></div>
@@ -920,7 +988,7 @@
                                                     <div class="seedrow1"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedA4"></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead2">
+                                            <div class="seedrowhead2" id="restoreSeedRowHead2">
                                                 <div class="seedCell">
                                                     <div>B1</div>
                                                     <div class="seedrow2"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedB1"></div></div>
@@ -938,7 +1006,7 @@
                                                     <div class="seedrow2"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedB4"></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead3">
+                                            <div class="seedrowhead3" id="restoreSeedRowHead3">
                                                 <div class="seedCell">
                                                     <div>C1</div>
                                                     <div class="seedrow3"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedC1"></div></div>
@@ -956,7 +1024,7 @@
                                                     <div class="seedrow3"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedC4"></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead4">
+                                            <div class="seedrowhead4" id="restoreSeedRowHead4">
                                                 <div class="seedCell">
                                                     <div>D1</div>
                                                     <div class="seedrow4"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedD1"></div></div>
@@ -974,7 +1042,7 @@
                                                     <div class="seedrow4"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedD4"></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead5">
+                                            <div class="seedrowhead5" id="restoreSeedRowHead5">
                                                 <div class="seedCell">
                                                     <div>E1</div>
                                                     <div class="seedrow5"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedE1"></div></div>
@@ -992,7 +1060,7 @@
                                                     <div class="seedrow5"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedE4"></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead6">
+                                            <div class="seedrowhead6" id="restoreSeedRowHead6">
                                                 <div class="seedCell">
                                                     <div>F1</div>
                                                     <div class="seedrow6"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedF1"></div></div>
@@ -1010,7 +1078,7 @@
                                                     <div class="seedrow6"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedF4"></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead7">
+                                            <div class="seedrowhead7" id="restoreSeedRowHead7">
                                                 <div class="seedCell">
                                                     <div>G1</div>
                                                     <div class="seedrow7"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedG1"></div></div>
@@ -1028,7 +1096,7 @@
                                                     <div class="seedrow7"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedG4"></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead8">
+                                            <div class="seedrowhead8" id="restoreSeedRowHead8">
                                                 <div class="seedCell">
                                                     <div>H1</div>
                                                     <div class="seedrow8"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedH1"></div></div>
@@ -1046,7 +1114,7 @@
                                                     <div class="seedrow8"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedH4"></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead9">
+                                            <div class="seedrowhead9" id="restoreSeedRowHead9">
                                                 <div class="seedCell">
                                                     <div>I1</div>
                                                     <div class="seedrow9"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedI1"></div></div>
@@ -1064,7 +1132,7 @@
                                                     <div class="seedrow9"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedI4"></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead10">
+                                            <div class="seedrowhead10" id="restoreSeedRowHead10">
                                                 <div class="seedCell">
                                                     <div>J1</div>
                                                     <div class="seedrow10"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedJ1"></div></div>
@@ -1082,7 +1150,7 @@
                                                     <div class="seedrow10"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedJ4"></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead11">
+                                            <div class="seedrowhead11" id="restoreSeedRowHead11">
                                                 <div class="seedCell">
                                                     <div>K1</div>
                                                     <div class="seedrow11"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedK1"></div></div>
@@ -1100,7 +1168,7 @@
                                                     <div class="seedrow11"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedK4"></div></div>
                                                 </div>
                                             </div>
-                                            <div class="seedrowhead12">
+                                            <div class="seedrowhead12" id="restoreSeedRowHead12">
                                                 <div class="seedCell">
                                                     <div>L1</div>
                                                     <div class="seedrow12"><div class="entrybox edit-div" contenteditable="true" id="txtRestoreSeedL1"></div></div>
@@ -2074,7 +2142,7 @@
                                     <div class="tab-pane fade active show" id="revealseedpart" role="tabpanel">
                                         <div class="divSeedTable">
                                             <div class="divSeedBody" tabindex="4">
-                                                <div class="seedrowhead1">
+                                                <div class="seedrowhead1" id="revealSeedRowHead1">
                                                     <div class="seedCell">
                                                         <div>A1</div>
                                                         <div class="seedrow1" id="divRevealSeed0">HELLOWORLD</div>
@@ -2092,7 +2160,7 @@
                                                         <div class="seedrow1" id="divRevealSeed3">MOTIVATE</div>
                                                     </div>
                                                 </div>
-                                                <div class="seedrowhead2">
+                                                <div class="seedrowhead2" id="revealSeedRowHead2">
                                                     <div class="seedCell">
                                                         <div>B1</div>
                                                         <div class="seedrow2" id="divRevealSeed4">BICYCLE</div>
@@ -2110,7 +2178,7 @@
                                                         <div class="seedrow2" id="divRevealSeed7">PINGPONG</div>
                                                     </div>
                                                 </div>
-                                                <div class="seedrowhead3">
+                                                <div class="seedrowhead3" id="revealSeedRowHead3">
                                                     <div class="seedCell">
                                                         <div>C1</div>
                                                         <div class="seedrow3" id="divRevealSeed8">PINTHAT</div>
@@ -2128,7 +2196,7 @@
                                                         <div class="seedrow3" id="divRevealSeed11">OKFINE</div>
                                                     </div>
                                                 </div>
-                                                <div class="seedrowhead4">
+                                                <div class="seedrowhead4" id="revealSeedRowHead4">
                                                     <div class="seedCell">
                                                         <div>D1</div>
                                                         <div class="seedrow4" id="divRevealSeed12">NAVY</div>
@@ -2146,7 +2214,7 @@
                                                         <div class="seedrow4" id="divRevealSeed15">WITHER</div>
                                                     </div>
                                                 </div>
-                                                <div class="seedrowhead5">
+                                                <div class="seedrowhead5" id="revealSeedRowHead5">
                                                     <div class="seedCell">
                                                         <div>E1</div>
                                                         <div class="seedrow5" id="divRevealSeed16">OK</div>
@@ -2164,7 +2232,7 @@
                                                         <div class="seedrow5" id="divRevealSeed19">CHOCOLATE</div>
                                                     </div>
                                                 </div>
-                                                <div class="seedrowhead6">
+                                                <div class="seedrowhead6" id="revealSeedRowHead6">
                                                     <div class="seedCell">
                                                         <div>F1</div>
                                                         <div class="seedrow6" id="divRevealSeed20">MILKSWEET</div>
@@ -2182,7 +2250,7 @@
                                                         <div class="seedrow6" id="divRevealSeed23">HONEY</div>
                                                     </div>
                                                 </div>
-                                                <div class="seedrowhead7">
+                                                <div class="seedrowhead7" id="revealSeedRowHead7">
                                                     <div class="seedCell">
                                                         <div>G1</div>
                                                         <div class="seedrow7" id="divRevealSeed24">PINEAPPLE</div>
@@ -2200,7 +2268,7 @@
                                                         <div class="seedrow7" id="divRevealSeed27">PINTBUG</div>
                                                     </div>
                                                 </div>
-                                                <div class="seedrowhead8">
+                                                <div class="seedrowhead8" id="revealSeedRowHead8">
                                                     <div class="seedCell">
                                                         <div>H1</div>
                                                         <div class="seedrow8" id="divRevealSeed28">MICROWIN</div>
@@ -2218,7 +2286,7 @@
                                                         <div class="seedrow8" id="divRevealSeed31">WHYNOT</div>
                                                     </div>
                                                 </div>
-                                                <div class="seedrowhead9">
+                                                <div class="seedrowhead9" id="revealSeedRowHead9">
                                                     <div class="seedCell">
                                                         <div>I1</div>
                                                         <div class="seedrow9" id="divRevealSeed32">HELLOWORLD</div>
@@ -2236,7 +2304,7 @@
                                                         <div class="seedrow9" id="divRevealSeed35">WHO</div>
                                                     </div>
                                                 </div>
-                                                <div class="seedrowhead10">
+                                                <div class="seedrowhead10" id="revealSeedRowHead10">
                                                     <div class="seedCell">
                                                         <div>J1</div>
                                                         <div class="seedrow10" id="divRevealSeed36">WHOM</div>
@@ -2254,7 +2322,7 @@
                                                         <div class="seedrow10" id="divRevealSeed39">TAKECARE</div>
                                                     </div>
                                                 </div>
-                                                <div class="seedrowhead11">
+                                                <div class="seedrowhead11" id="revealSeedRowHead11">
                                                     <div class="seedCell">
                                                         <div>K1</div>
                                                         <div class="seedrow11" id="divRevealSeed40">BLITLINE</div>
@@ -2272,7 +2340,7 @@
                                                         <div class="seedrow11" id="divRevealSeed43">HASTILY</div>
                                                     </div>
                                                 </div>
-                                                <div class="seedrowhead12">
+                                                <div class="seedrowhead12" id="revealSeedRowHead12">
                                                     <div class="seedCell">
                                                         <div>L1</div>
                                                         <div class="seedrow12" id="divRevealSeed44">PATIO</div>
@@ -2348,8 +2416,6 @@
 
     <script src="js/util.js"></script>
     <script src="js/storage.js"></script>
-    <script src="lib/dp/wasm_exec.js"></script>
-    <script src="lib/hybrid-pqc/hybrid-pqc.js"></script>
     <script src="lib/seedwords/seedwords.js"></script>
     <script src="js/qrcode.js"></script>
     <script src="js/bridge.js"></script>

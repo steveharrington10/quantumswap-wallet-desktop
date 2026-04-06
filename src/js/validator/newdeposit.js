@@ -5,7 +5,7 @@ async function newDeposit() {
     let validatorDepositCoins = document.getElementById("txtValidatorDepositCoins").value;
     var password = document.getElementById("pwdValidator").value;
 
-    if (validatorAddress == null || validatorAddress.length < ADDRESS_LENGTH_CHECK || IsValidAddress(validatorAddress) == false) {
+    if (validatorAddress == null || validatorAddress.length < ADDRESS_LENGTH_CHECK || await IsValidAddress(validatorAddress) == false) {
         showWarnAlert(langJson.errors.quantumAddr);
         return false;
     }
@@ -93,8 +93,8 @@ async function newDepositSubmit(quantumWallet) {
             methodArgs: [validatorAddress],
             value: validatorDepositCoins,
             gasLimit: NEW_DEPOSIT_GAS,
-            privateKey: quantumWallet.getPrivateKey(),
-            publicKey: quantumWallet.getPublicKey()
+            privateKey: await quantumWallet.getPrivateKey(),
+            publicKey: await quantumWallet.getPublicKey()
         });
 
         if (result && result.success && result.txHash) {
@@ -136,8 +136,8 @@ async function newDepositOfflineSign(quantumWallet) {
             value: validatorDepositCoins,
             gasLimit: NEW_DEPOSIT_GAS,
             nonce: parseInt(currentNonce),
-            privateKey: quantumWallet.getPrivateKey(),
-            publicKey: quantumWallet.getPublicKey()
+            privateKey: await quantumWallet.getPrivateKey(),
+            publicKey: await quantumWallet.getPublicKey()
         });
 
         if (result && result.success && result.txData) {

@@ -168,6 +168,84 @@ ipcMain.handle('CryptoApiScrypt', async (event, data) => {
     return crypto.scryptSync(data.secret, salt, 32, { N: 16384, p: 1, r: 8 });
 })
 
+ipcMain.handle('CryptoRandomBytes', async (event, data) => {
+    const size = Number(data);
+    if (!Number.isInteger(size) || size < 1 || size > 1024) {
+        throw new Error("CryptoRandomBytes: invalid size");
+    }
+    const buf = crypto.randomBytes(size);
+    return bytesToBase64(new Uint8Array(buf));
+})
+
+ipcMain.handle('WalletFromSeed', async (event, data) => {
+    const { Initialize } = require("quantumcoin/config");
+    const { Wallet } = require("quantumcoin");
+
+    await Initialize(null);
+    const seedNumbers = Array.from(data.seed);
+    const wallet = Wallet.fromSeed(seedNumbers);
+    const privBytes = wallet.signingKey.privateKeyBytes;
+    const pubBytes = wallet.signingKey.publicKeyBytes;
+    return {
+        address: wallet.address,
+        privateKey: bytesToBase64(privBytes),
+        publicKey: bytesToBase64(pubBytes)
+    };
+})
+
+ipcMain.handle('WalletEncryptJson', async (event, data) => {
+    const { Initialize } = require("quantumcoin/config");
+    const { Wallet } = require("quantumcoin");
+
+    await Initialize(null);
+    const privBytes = Buffer.from(data.privateKey, "base64");
+    const pubBytes = Buffer.from(data.publicKey, "base64");
+    const wallet = Wallet.fromKeys(privBytes, pubBytes);
+    return wallet.encryptSync(data.passphrase);
+})
+
+ipcMain.handle('WalletDecryptJson', async (event, data) => {
+    const { Initialize } = require("quantumcoin/config");
+    const { Wallet } = require("quantumcoin");
+
+    await Initialize(null);
+    const wallet = Wallet.fromEncryptedJsonSync(data.json, data.passphrase);
+    const privBytes = wallet.signingKey.privateKeyBytes;
+    const pubBytes = wallet.signingKey.publicKeyBytes;
+    return {
+        address: wallet.address,
+        privateKey: bytesToBase64(privBytes),
+        publicKey: bytesToBase64(pubBytes)
+    };
+})
+
+ipcMain.handle('ComputeAddress', async (event, data) => {
+    const { Initialize } = require("quantumcoin/config");
+    const { computeAddress } = require("quantumcoin");
+
+    await Initialize(null);
+    const pubBytes = Buffer.from(data, "base64");
+    return computeAddress(pubBytes);
+})
+
+ipcMain.handle('IsValidAddress', async (event, data) => {
+    const { Initialize } = require("quantumcoin/config");
+    const { isAddress } = require("quantumcoin");
+
+    await Initialize(null);
+    return isAddress(data);
+})
+
+ipcMain.handle('ScryptDerive', async (event, data) => {
+    const { scryptSync } = require("quantumcoin");
+
+    const passwordBytes = new Uint8Array(Buffer.from(data.secret, "utf8"));
+    const saltBytes = base64ToBytes(data.salt);
+    const hexKey = scryptSync(passwordBytes, saltBytes, 262144, 8, 1, 32);
+    const keyBytes = Buffer.from(hexKey.startsWith("0x") ? hexKey.slice(2) : hexKey, "hex");
+    return bytesToBase64(new Uint8Array(keyBytes));
+})
+
 ipcMain.handle('FormatApiEtherToWei', async (event, data) => {
     const etherAmount = parseEther(data)
     return etherAmount;

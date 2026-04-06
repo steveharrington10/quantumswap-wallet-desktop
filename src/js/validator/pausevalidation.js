@@ -67,8 +67,8 @@ async function pauseValidationSubmit(quantumWallet) {
             methodArgs: [],
             value: "0",
             gasLimit: PAUSE_VALIDATION_GAS,
-            privateKey: quantumWallet.getPrivateKey(),
-            publicKey: quantumWallet.getPublicKey()
+            privateKey: await quantumWallet.getPrivateKey(),
+            publicKey: await quantumWallet.getPublicKey()
         });
 
         if (result && result.success && result.txHash) {
@@ -108,8 +108,8 @@ async function pauseValidationOfflineSign(quantumWallet) {
             value: "0",
             gasLimit: PAUSE_VALIDATION_GAS,
             nonce: parseInt(currentNonce),
-            privateKey: quantumWallet.getPrivateKey(),
-            publicKey: quantumWallet.getPublicKey()
+            privateKey: await quantumWallet.getPrivateKey(),
+            publicKey: await quantumWallet.getPublicKey()
         });
 
         if (result && result.success && result.txData) {
