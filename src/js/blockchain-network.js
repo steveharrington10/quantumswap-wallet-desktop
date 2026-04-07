@@ -112,8 +112,8 @@ const isValidDomainName = (supposedDomainName) => {
 };
 
 class BlockchainNetwork {
-    constructor(scanApiDomain, txnApiDomain, blockExplorerDomain, networkId, blockchainName, rpcEndpoint, index) {
-        if (scanApiDomain == null || txnApiDomain == null || blockExplorerDomain == null || networkId == null || blockchainName == null) {
+    constructor(scanApiDomain, blockExplorerDomain, networkId, blockchainName, rpcEndpoint, index) {
+        if (scanApiDomain == null || blockExplorerDomain == null || networkId == null || blockchainName == null) {
             throw new Error("BlockchainNetwork null values")
         }
 
@@ -146,7 +146,6 @@ class BlockchainNetwork {
         }
 
         this.scanApiDomain = scanApiDomain;
-        this.txnApiDomain = txnApiDomain;
         this.blockExplorerDomain = blockExplorerDomain;
         this.networkId = networkId;
         this.blockchainName = blockchainName;
@@ -213,7 +212,7 @@ async function blockchainNetworkAddNew(networkJson) {
     let networkItem = JSON.parse(jsonRaw);
     let maxIndex = await blockchainNetworkGetMaxIndex();
     maxIndex = maxIndex + 1;
-    let blockchainNetwork = new BlockchainNetwork(networkItem.scanApiDomain, networkItem.txnApiDomain, networkItem.blockExplorerDomain, networkItem.networkId, networkItem.blockchainName, networkItem.rpcEndpoint, maxIndex);
+    let blockchainNetwork = new BlockchainNetwork(networkItem.scanApiDomain, networkItem.blockExplorerDomain, networkItem.networkId, networkItem.blockchainName, networkItem.rpcEndpoint, maxIndex);
     let key = BLOCKCHAIN_NETWORK_KEY_PREFIX + maxIndex.toString();
 
     const stored = {
