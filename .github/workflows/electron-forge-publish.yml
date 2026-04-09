@@ -11,7 +11,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [macos-latest, windows-latest, ubuntu-latest]
 
     steps:
       - name: Check out Git repository
@@ -30,6 +30,14 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
+      - name: Install DMG dependencies
+        if: matrix.os == 'macos-latest'
+        run: npm install --save-dev appdmg
+
+      - name: Install Linux packaging dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y fakeroot dpkg rpm
+        
       - name: Publish
         run: npm run publish
   
@@ -37,4 +45,4 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           allowUpdates: true
-          artifacts: "out/make/squirrel.windows/x64/*.exe,out/make/*.dmg"
+          artifacts: "out/make/squirrel.windows/x64/*.exe,out/make/*.dmg,out/make/**/*.deb,out/make/**/*.rpm"
