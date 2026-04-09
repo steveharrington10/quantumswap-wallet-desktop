@@ -14,8 +14,7 @@
   },
   "author": "QuantumSwap Community",
   "license": "MIT",
-  "dependencies": {
-    "@electron-forge/maker-dmg": "^6.1.1",
+  "dependencies": {    
     "electron-squirrel-startup": "^1.0.0",
     "quantumcoin": "^7.0.9",
     "quantumswap": "^0.0.5",
@@ -45,12 +44,14 @@
     }
   },
   "devDependencies": {
+    "electron": "^40.8.5",
     "@electron-forge/cli": "^6.4.2",
+    "@electron-forge/maker-squirrel": "^6.0.5",
+    "@electron-forge/maker-dmg": "^6.1.1",
+    "@electron-forge/maker-zip": "^6.0.5",
     "@electron-forge/maker-deb": "^6.0.5",
     "@electron-forge/maker-rpm": "^6.0.5",
-    "@electron-forge/maker-squirrel": "^6.0.5",
-    "@electron-forge/maker-zip": "^6.0.5",
-    "electron": "^40.8.5"
+    "appdmg": "^0.6.0"
   },
   "overrides": {
     "tar": "^7.5.11",
