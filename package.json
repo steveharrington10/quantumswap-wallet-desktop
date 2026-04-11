@@ -14,8 +14,7 @@
   },
   "author": "QuantumSwap Community",
   "license": "MIT",
-  "dependencies": {
-    "@electron-forge/maker-dmg": "^6.1.1",
+  "dependencies": {    
     "electron-squirrel-startup": "^1.0.0",
     "quantumcoin": "^7.0.9",
     "quantumswap": "^0.0.5",
@@ -45,12 +44,13 @@
     }
   },
   "devDependencies": {
+    "electron": "^40.8.5",
     "@electron-forge/cli": "^6.4.2",
-    "@electron-forge/maker-deb": "^6.0.5",
-    "@electron-forge/maker-rpm": "^6.0.5",
     "@electron-forge/maker-squirrel": "^6.0.5",
+    "@electron-forge/maker-dmg": "^6.1.1",
     "@electron-forge/maker-zip": "^6.0.5",
-    "electron": "^40.8.5"
+    "@electron-forge/maker-deb": "^6.0.5",
+    "@electron-forge/maker-rpm": "^6.0.5"
   },
   "overrides": {
     "tar": "^7.5.11",
@@ -71,6 +71,7 @@
       "makers": [
         {
           "name": "@electron-forge/maker-squirrel",
+          "platforms": ["win32"],
           "config": {
             "name": "quantumwswapallet",
             "iconUrl": "https://quantumswap.com/icon.ico",
@@ -80,6 +81,9 @@
         },
         {
           "name": "@electron-forge/maker-dmg",
+          "platforms": [
+            "darwin"
+          ],
           "config": {
             "name": "quantumwallet",
             "icon": "src/assets/icons/app/icon.icns"
@@ -98,6 +102,7 @@
         },
         {
           "name": "@electron-forge/maker-deb",
+          "platforms": ["linux"],
           "config": {
             "options": {
               "icon": "src/assets/icons/app/icon.png"
@@ -106,6 +111,7 @@
         },
         {
           "name": "@electron-forge/maker-rpm",
+          "platforms": ["linux"],
           "config": {
             "options": {
               "icon": "src/assets/icons/app/icon.png"
