@@ -27,7 +27,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 21.7.1
+          # Node 20 LTS: appdmg (native addon for DMG) often fails to build on Node 21+ / newer Xcode.
+          node-version: '20'
           cache: npm
 
       - name: Install Dependencies
@@ -35,7 +36,10 @@ jobs:
 
       - name: Install DMG dependencies
         if: matrix.os == 'macos-latest'
-        run: npm install --no-save appdmg
+        env:
+          PYTHON: python3
+          npm_config_python: python3
+        run: npm install --no-save appdmg@0.6.6 --foreground-scripts
 
       - name: Publish
         run: npm run publish
