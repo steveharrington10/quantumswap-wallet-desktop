@@ -23,6 +23,11 @@ function signingOverrides(wallet, data, base) {
     return { ...base, signingContext: wallet.getSigningContext(fullSign) };
 }
 
+function sanitizeSwapError(err) {
+    const msg = (err && err.message) ? err.message : String(err);
+    return msg.replace(/uniswap/gi, "").trim();
+}
+
 const additionalData = { myKey: 'myValue' }
 const gotTheLock = app.requestSingleInstanceLock(additionalData)
 var startFilename = "index.html";
@@ -454,7 +459,7 @@ ipcMain.handle('SwapQuoteGetAmountsOut', async (event, data) => {
 
         return { success: true, amountOut };
     } catch (err) {
-        return { success: false, error: (err && err.message) ? err.message : String(err) };
+        return { success: false, error: sanitizeSwapError(err) };
     }
 });
 
@@ -482,7 +487,7 @@ ipcMain.handle('SwapQuoteCheckPairExists', async (event, data) => {
 
         return { exists, error: null };
     } catch (err) {
-        return { exists: false, error: (err && err.message) ? err.message : String(err) };
+        return { exists: false, error: sanitizeSwapError(err) };
     }
 });
 
@@ -515,7 +520,7 @@ ipcMain.handle('SwapQuoteGetAmountsIn', async (event, data) => {
 
         return { success: true, amountIn };
     } catch (err) {
-        return { success: false, error: (err && err.message) ? err.message : String(err) };
+        return { success: false, error: sanitizeSwapError(err) };
     }
 });
 
@@ -603,6 +608,7 @@ ipcMain.handle('SwapQuoteEstimateGas', async (event, data) => {
         return { success: true, gasLimit: gasLimitStr, error: null };
     } catch (err) {
         return { success: false, gasLimit: null, error: formatSwapRouterRevertError(err) };
+        return { success: false, gasLimit: null, error: sanitizeSwapError(err) };
     }
 });
 
@@ -639,7 +645,7 @@ ipcMain.handle('SwapQuoteCheckAllowance', async (event, data) => {
         const sufficient = (typeof allowanceWei === "bigint" ? allowanceWei : BigInt(allowanceStr)) >= requiredWei;
         return { success: true, sufficient, allowance: allowanceStr, error: null };
     } catch (err) {
-        return { success: false, sufficient: false, error: (err && err.message) ? err.message : String(err) };
+        return { success: false, sufficient: false, error: sanitizeSwapError(err) };
     }
 });
 
@@ -669,7 +675,7 @@ ipcMain.handle('SwapQuoteEstimateApproveGas', async (event, data) => {
         const gasLimitStr = typeof gasLimit === "bigint" ? gasLimit.toString() : String(gasLimit);
         return { success: true, gasLimit: gasLimitStr, error: null };
     } catch (err) {
-        return { success: false, gasLimit: null, error: (err && err.message) ? err.message : String(err) };
+        return { success: false, gasLimit: null, error: sanitizeSwapError(err) };
     }
 });
 
@@ -729,6 +735,7 @@ ipcMain.handle('SwapQuoteGetSwapContractData', async (event, data) => {
         return { success: true, dataHex, toAddress: SWAP_ROUTER_V2_CONTRACT_ADDRESS, valueHex, error: null };
     } catch (err) {
         return { success: false, dataHex: null, toAddress: null, valueHex: null, error: formatSwapRouterRevertError(err) };
+        return { success: false, dataHex: null, toAddress: null, valueHex: null, error: sanitizeSwapError(err) };
     }
 });
 
@@ -759,7 +766,7 @@ ipcMain.handle('SwapSubmitApproval', async (event, data) => {
         const tx = await token.approve(getAddress(SWAP_ROUTER_V2_CONTRACT_ADDRESS), amountWei, signingOverrides(wallet, data, { gasLimit }));
         return { success: true, txHash: tx.hash, error: null };
     } catch (err) {
-        return { success: false, txHash: null, error: (err && err.message) ? err.message : String(err) };
+        return { success: false, txHash: null, error: sanitizeSwapError(err) };
     }
 });
 
@@ -819,6 +826,7 @@ ipcMain.handle('SwapSubmitSwap', async (event, data) => {
         return { success: true, txHash: tx.hash, error: null };
     } catch (err) {
         return { success: false, txHash: null, error: formatSwapRouterRevertError(err) };
+        return { success: false, txHash: null, error: sanitizeSwapError(err) };
     }
 });
 
@@ -847,7 +855,7 @@ ipcMain.handle('SwapSubmitRemoveAllowance', async (event, data) => {
         const tx = await token.approve(getAddress(SWAP_ROUTER_V2_CONTRACT_ADDRESS), 0n, signingOverrides(wallet, data, { gasLimit }));
         return { success: true, txHash: tx.hash, error: null };
     } catch (err) {
-        return { success: false, txHash: null, error: (err && err.message) ? err.message : String(err) };
+        return { success: false, txHash: null, error: sanitizeSwapError(err) };
     }
 });
 
@@ -878,7 +886,7 @@ ipcMain.handle('SwapSubmitAddAllowance', async (event, data) => {
         const tx = await token.approve(getAddress(SWAP_ROUTER_V2_CONTRACT_ADDRESS), amountWei, signingOverrides(wallet, data, { gasLimit }));
         return { success: true, txHash: tx.hash, error: null };
     } catch (err) {
-        return { success: false, txHash: null, error: (err && err.message) ? err.message : String(err) };
+        return { success: false, txHash: null, error: sanitizeSwapError(err) };
     }
 });
 
@@ -1127,6 +1135,6 @@ ipcMain.handle('SwapQuoteGetApproveContractData', async (event, data) => {
         if (!dataHex) return { success: false, dataHex: null, tokenAddress: null, error: "No contract data" };
         return { success: true, dataHex, tokenAddress: tokenAddr, error: null };
     } catch (err) {
-        return { success: false, dataHex: null, tokenAddress: null, error: (err && err.message) ? err.message : String(err) };
+        return { success: false, dataHex: null, tokenAddress: null, error: sanitizeSwapError(err) };
     }
 });
