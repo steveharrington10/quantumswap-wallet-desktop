@@ -46,3 +46,4 @@ jobs:
           allowUpdates: true
           artifacts: |
             out/make/squirrel.windows/x64/*.exe
+          token: ${{ secrets.GITHUB_TOKEN }}
