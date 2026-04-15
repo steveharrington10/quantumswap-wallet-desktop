@@ -51,7 +51,15 @@
       "perMachine": true,
       "allowToChangeInstallationDirectory": true,
       "deleteAppDataOnUninstall": true
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "steveharrington10",
+        "repo": "quantumswap-wallet-desktop",
+        "releaseType": "release"
+      }
+    ]
   },
   "overrides": {
     "rimraf": "^5.0.5",
