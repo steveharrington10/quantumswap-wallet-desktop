@@ -38,6 +38,8 @@ jobs:
         run: npm install
 
       - name: Publish
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: npm run publish
 
       - name: Release
@@ -46,4 +48,3 @@ jobs:
           allowUpdates: true
           artifacts: |
             out/make/squirrel.windows/x64/*.exe
-          token: ${{ secrets.GITHUB_TOKEN }}
