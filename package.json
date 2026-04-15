@@ -1,102 +1,62 @@
 {
   "name": "quantumswapwallet",
-  "productName": "quantumswapwallet",
-  "version": "1.0.2",
-  "description": "QuantumSwap",
+  "productName": "QuantumSwap Wallet",
+  "version": "1.0.4",
+  "description": "QuantumSwap Wallet - Secure desktop wallet for Windows",
   "main": "src/index.js",
   "scripts": {
-    "start": "electron-forge start",
-    "package": "electron-forge package",
-    "make": "electron-forge make",
-    "publish": "electron-forge publish",
-    "lint": "echo \"No linting configured\"",
+    "start": "electron .",
+    "dist": "electron-builder --win",
+    "publish": "electron-builder --win --publish always",
+    "lint": "eslint src",
     "build-icons": "node scripts/build-icons.js"
   },
   "author": "QuantumSwap Community",
   "license": "MIT",
-  "dependencies": {    
+  "dependencies": {
     "electron-squirrel-startup": "^1.0.0",
     "quantumcoin": "^7.0.9",
     "quantumswap": "^0.0.5",
     "sjcl": "^1.0.8"
   },
+  "devDependencies": {
+    "electron": "^41.2.0",
+    "electron-builder": "^26.8.1",
+    "eslint": "^9.0.0"
+  },
+  "engines": {
+    "node": ">=24.14.1",
+    "npm": ">=11.12.1"
+  },
   "build": {
-    "extraResources": [
-      "assets/**",
-      "theme/**",
+    "appId": "com.quantumswap.wallet",
+    "asar": true,
+    "files": [
+      "src/**",
       "js/**",
       "lib/**",
-      "**"
-    ]
-  },
-  "files": [
-    "js/**"
-  ],
-  "mac": {
-    "target": {
-      "target": "default",
-      "arch": "universal"
-    },
+      "assets/**"
+    ],
     "win": {
-      "target": "nsis",
-      "icon": "src/assets/icons/app/icon.ico",
-      "appId": "QuantumSwap Wallet"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64", "ia32"]
+        }
+      ],
+      "icon": "src/assets/icons/app/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": true
     }
-  },
-  "devDependencies": {
-    "electron": "^40.8.5",
-    "@electron-forge/cli": "^6.4.2",
-    "@electron-forge/maker-squirrel": "^6.0.5",
-    "@electron-forge/maker-dmg": "^6.1.1",
-    "@electron-forge/maker-zip": "^6.0.5"
   },
   "overrides": {
-    "tar": "^7.5.11",
-    "yauzl": "^3.2.1",
-    "@tootallnate/once": "^3.0.1"
-  },
-  "config": {
-    "forge": {
-      "packagerConfig": {
-        "icon": "src/assets/icons/app/icon.ico",
-        "out": "dist",
-        "osxUniversal": {
-          "x64ArchFiles": "*"
-        }
-      },
-      "makers": [
-        {
-          "name": "@electron-forge/maker-squirrel",
-          "platforms": ["win32"],
-          "config": {
-            "name": "quantumwswapallet",
-            "iconUrl": "https://quantumswap.com/icon.ico",
-            "setupIcon": "src/assets/icons/app/icon.ico",
-            "loadingGif": "src/assets/icons/loading.gif"
-          }
-        },
-        {
-          "name": "@electron-forge/maker-dmg",
-          "platforms": [
-            "darwin"
-          ],
-          "config": {
-            "name": "quantumwswapallet",
-            "icon": "src/assets/icons/app/icon.icns"
-          }
-        },
-        {
-          "name": "@electron-forge/maker-zip",
-          "platforms": [
-            "darwin"
-          ],
-          "config": {
-            "options": {
-              "icon": "src/assets/icons/app/icon.png"
-            }
-          }
-        }
-      ]
-    }
+    "rimraf": "^5.0.5",
+    "glob": "^13.0.6",
+    "tar": "^7.0.0",
+    "boolean": "^3.2.1"
   }
 }

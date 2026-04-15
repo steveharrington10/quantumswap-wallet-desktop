@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [windows-latest]
 
     steps:
       - name: Check out Git repository
@@ -31,19 +31,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          # Node 20 LTS was used before, but GitHub will enforce Node 24 soon.
-          node-version: '24'
+          node-version: '25'
           cache: npm
 
       - name: Install Dependencies
-        run: npm install --legacy-peer-deps --no-audit --no-fund
-
-      - name: Install DMG dependencies
-        if: matrix.os == 'macos-latest'
-        env:
-          PYTHON: python3
-          npm_config_python: python3
-        run: npm install --no-save appdmg@0.6.6 --foreground-scripts
+        run: npm install
 
       - name: Publish
         run: npm run publish
@@ -54,5 +46,4 @@ jobs:
           allowUpdates: true
           artifacts: |
             out/make/squirrel.windows/x64/*.exe
-            out/make/*.dmg
           token: ${{ secrets.GITHUB_TOKEN }}
