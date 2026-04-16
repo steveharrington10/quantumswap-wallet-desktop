@@ -55,7 +55,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "QuantumSwap Community",
+        "owner": "Quantum Swap Community",
         "repo": "quantumswap-wallet-desktop",
         "releaseType": "release"
       }
